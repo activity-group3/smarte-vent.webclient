@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { FaSignOutAlt, FaUser, FaCalendar, FaCog, FaBars, FaPlus } from "react-icons/fa";
-import "./dashboardLayout.css";
+import { FaSignOutAlt, FaUsers, FaCalendar, FaCog, FaBars, FaTachometerAlt } from "react-icons/fa";
+// import "./adminLayout.css";
 
-const DashboardLayout = () => {
+const AdminLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
@@ -15,7 +15,14 @@ const DashboardLayout = () => {
       navigate("/auth/login");
       return;
     }
-    setUser(JSON.parse(userData));
+
+    const user = JSON.parse(userData);
+    // Check if user has ADMIN role, if not redirect to dashboard
+    if (user.role !== "ADMIN") {
+      navigate("/dashboard");
+      return;
+    }
+    setUser(user);
   }, [navigate]);
 
   const handleLogout = () => {
@@ -35,40 +42,21 @@ const DashboardLayout = () => {
       </button>
       <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
         <div className="sidebar-header">
-          <FaUser className="avatar" />
-          <div className="user-info">
-            <h3>{user?.name || "Student"}</h3>
-            <p className="student-code">{user?.student_code || "Loading..."}</p>
-          </div>
+          <h2>Admin Panel</h2>
         </div>
         <nav className="sidebar-nav">
-          <Link
-            to="/dashboard"
-            className={location.pathname === "/dashboard" ? "active" : ""}
-          >
-            <FaCalendar /> All Activities
+          <Link to="/admin/dashboard" className={location.pathname === "/admin/dashboard" ? "active" : ""}>
+            <FaTachometerAlt /> Dashboard
           </Link>
-          <Link
-            to="/my-activities"
-            className={location.pathname === "/my-activities" ? "active" : ""}
-          >
-            <FaUser /> Joined Activity
+          <Link to="/admin/users" className={location.pathname === "/admin/users" ? "active" : ""}>
+            <FaUsers /> Users
           </Link>
-          <Link
-            to="/my-participation"
-            className={location.pathname === "/my-participation" ? "active" : ""}
-          >
-            <FaUser /> My Participation
+          <Link to="/admin/activities" className={location.pathname === "/admin/activities" ? "active" : ""}>
+            <FaCalendar /> Activities
           </Link>
-          <Link
-            to="/activities/create"
-            className={location.pathname === "/activities/create" ? "active" : ""}
-          >
-            <FaPlus /> Create Activity
-          </Link>
-          <a href="#settings">
+          <Link to="/admin/settings" className={location.pathname === "/admin/settings" ? "active" : ""}>
             <FaCog /> Settings
-          </a>
+          </Link>
           <button onClick={handleLogout} className="logout-btn">
             <FaSignOutAlt /> Logout
           </button>
@@ -81,4 +69,4 @@ const DashboardLayout = () => {
   );
 };
 
-export default DashboardLayout;
+export default AdminLayout;

@@ -1,4 +1,4 @@
-import { useRoutes } from "react-router-dom";
+import { useRoutes, Navigate } from "react-router-dom";
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
 import ErrorPage from "../pages/Error";
@@ -8,6 +8,16 @@ import ActivityDetail from "../pages/ActivityDetail";
 import MyActivities from "../pages/MyActivities";
 import MyParticipant from "../pages/MyParticipant";
 import DashboardLayout from "../layouts/DashboardLayout";
+import AdminLayout from "../layouts/AdminLayout";
+import AdminDashboard from "../pages/Admin/Dashboard";
+import CreateActivity from "../pages/CreateActivity";
+
+const checkAdminRole = () => {
+  const userData = localStorage.getItem("user");
+  if (!userData) return false;
+  const user = JSON.parse(userData);
+  return user.role === "ADMIN";
+};
 
 // Define the Router as a React component
 function Router() {
@@ -60,6 +70,26 @@ function Router() {
           element: <MyParticipant />,
           errorElement: <ErrorPage />,
         },
+      ],
+    },
+    {
+      element: checkAdminRole() ? (
+        <AdminLayout />
+      ) : (
+        <Navigate to="/dashboard" />
+      ),
+      children: [
+        {
+          path: "/admin/dashboard",
+          element: <AdminDashboard />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/activities/create",
+          element: <CreateActivity />,
+          errorElement: <ErrorPage />,
+        },
+        // ...other admin routes...
       ],
     },
     {
