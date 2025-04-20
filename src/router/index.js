@@ -2,15 +2,20 @@ import { useRoutes, Navigate } from "react-router-dom";
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
 import ErrorPage from "../pages/Error";
-import Home from "../pages/Home";
-import Dashboard from "../pages/Dashboard";
-import ActivityDetail from "../pages/ActivityDetail";
-import MyActivities from "../pages/MyActivities";
-import MyParticipant from "../pages/MyParticipant";
+import Home from "../pages/user/Home";
+import Dashboard from "../pages/user/Dashboard";
+import ActivityDetail from "../pages/user/ActivityDetail";
+import MyActivities from "../pages/user/MyActivities";
+import MyParticipant from "../pages/user/MyParticipant";
 import DashboardLayout from "../layouts/DashboardLayout";
 import AdminLayout from "../layouts/AdminLayout";
 import AdminDashboard from "../pages/Admin/Dashboard";
-import CreateActivity from "../pages/CreateActivity";
+import CreateActivity from "../pages/Admin/CreateActivity";
+import AdminActivityDetail from "../pages/Admin/ActivityDetail";
+import AdminParticipantManage from "../pages/Admin/Participant-Management";
+import AdminAccountManage from "../pages/Admin/Account-Management";
+import AdminActivityManage from "../pages/Admin/Activity-Management";
+import CreateAccount from "../pages/Admin/CreateAccount";
 
 const checkAdminRole = () => {
   const userData = localStorage.getItem("user");
@@ -87,6 +92,31 @@ function Router() {
         {
           path: "/admin/activities/create",
           element: <CreateActivity />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/activities/:id",
+          element: <AdminActivityDetail />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/activities/:id/participants",
+          element: <AdminParticipantManage />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/accounts",
+          element: <AdminAccountManage />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/activities",
+          element: <AdminActivityManage />,
+          errorElement: <ErrorPage />,
+        },
+        {
+          path: "/admin/create-account",
+          element: <CreateAccount />,
           errorElement: <ErrorPage />,
         },
         // ...other admin routes...

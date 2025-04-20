@@ -28,7 +28,8 @@ const Login = () => {
         localStorage.setItem('access_token', data.data.access_token);
         localStorage.setItem('user', JSON.stringify(data.data.account));
         // Redirect to dashboard
-        navigate('/dashboard');
+        if (data.data.account.role === "ADMIN") navigate('/admin/dashboard');
+        else navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');
       }

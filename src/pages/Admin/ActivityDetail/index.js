@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaClock, FaMapMarkerAlt, FaUsers } from "react-icons/fa";
 import "./activityDetail.css";
 
-const ActivityDetail = () => {
+const AdminActivityDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activity, setActivity] = useState(null);
@@ -38,31 +38,36 @@ const ActivityDetail = () => {
     }
   };
 
-  const handleJoinActivity = async () => {
-    setJoining(true);
-    setJoinError(null);
-    try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch(`http://localhost:8080/activities/${id}/join`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
+  // const handleManageParticipant = async () => {
+  //   try {
+  //     const token = localStorage.getItem("access_token");
+  //     const response = await fetch(
+  //       `http://localhost:8080/activities/${id}/participants?page=${page}&size=${pagination.pageSize}&sort=${sort.field},${sort.direction}`,
+  //       {
+  //         method: "POST",
+  //         headers: {
+  //           Authorization: `Bearer ${token}`,
+  //           "Content-Type": "application/json",
+  //         },
+  //       }
+  //     );
 
-      const data = await response.json();
-      if (data.status_code <= 400) {
-        // Navigate to my activities page after successful join
-        navigate('/my-activities');
-      } else {
-        setJoinError(data.message || "Failed to join activity");
-      }
-    } catch (err) {
-      setJoinError("Network error while joining activity");
-    } finally {
-      setJoining(false);
-    }
+  //     const data = await response.json();
+  //     if (data.status_code <= 400) {
+  //       // Navigate to my activities page after successful join
+  //       navigate("/my-activities");
+  //     } else {
+  //       setJoinError(data.message || "Failed to join activity");
+  //     }
+  //   } catch (err) {
+  //     setJoinError("Network error while joining activity");
+  //   } finally {
+  //     setJoining(false);
+  //   }
+  // };
+
+  const handleManageParticipant = async () => {
+    navigate(`/admin/activities/${id}/participants`);
   };
 
   const formatDate = (dateString) => {
@@ -119,7 +124,11 @@ const ActivityDetail = () => {
         <div className="header-content">
           <h1>{activity.activity_name}</h1>
           <div className="status-wrapper">
-            <span className={`status-badge large ${getStatusColor(activity.activity_status)}`}>
+            <span
+              className={`status-badge large ${getStatusColor(
+                activity.activity_status
+              )}`}
+            >
               {activity.activity_status.replace(/_/g, " ")}
             </span>
           </div>
@@ -129,7 +138,7 @@ const ActivityDetail = () => {
       <div className="detail-content">
         <div className="main-info">
           <p className="description">{activity.description}</p>
-          
+
           <div className="info-grid">
             <div className="info-item">
               <FaMapMarkerAlt />
@@ -155,12 +164,14 @@ const ActivityDetail = () => {
 
           <div className="join-section">
             {joinError && <div className="error-message">{joinError}</div>}
-            <button 
+            <button
               className="join-button"
-              onClick={handleJoinActivity}
-              disabled={joining || activity.activity_status !== 'WAITING_TO_START'}
+              onClick={handleManageParticipant}
+              disabled={
+                joining || activity.activity_status !== "WAITING_TO_START"
+              }
             >
-              {joining ? 'Joining...' : 'Join Activity'}
+              {joining ? "Waiting..." : "Manage Participant"}
             </button>
           </div>
         </div>
@@ -172,7 +183,11 @@ const ActivityDetail = () => {
               <div key={schedule.id} className="schedule-card">
                 <div className="schedule-header">
                   <h3>{schedule.activityDescription}</h3>
-                  <span className={`schedule-status ${getScheduleStatusColor(schedule.status)}`}>
+                  <span
+                    className={`schedule-status ${getScheduleStatusColor(
+                      schedule.status
+                    )}`}
+                  >
                     {schedule.status}
                   </span>
                 </div>
@@ -192,4 +207,4 @@ const ActivityDetail = () => {
   );
 };
 
-export default ActivityDetail;
+export default AdminActivityDetail;

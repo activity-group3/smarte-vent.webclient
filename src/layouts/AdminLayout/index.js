@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
-import { FaSignOutAlt, FaUsers, FaCalendar, FaCog, FaBars, FaTachometerAlt } from "react-icons/fa";
+import {
+  FaSignOutAlt,
+  FaUsers,
+  FaCalendar,
+  FaCog,
+  FaBars,
+  FaTachometerAlt,
+} from "react-icons/fa";
 // import "./adminLayout.css";
 
 const AdminLayout = () => {
@@ -40,21 +47,46 @@ const AdminLayout = () => {
       <button className="sidebar-toggle" onClick={toggleSidebar}>
         <FaBars />
       </button>
-      <aside className={`sidebar ${isSidebarOpen ? 'open' : 'closed'}`}>
+      <aside className={`sidebar ${isSidebarOpen ? "open" : "closed"}`}>
         <div className="sidebar-header">
           <h2>Admin Panel</h2>
         </div>
         <nav className="sidebar-nav">
-          <Link to="/admin/dashboard" className={location.pathname === "/admin/dashboard" ? "active" : ""}>
+          <Link
+            to="/admin/dashboard"
+            className={location.pathname === "/admin/dashboard" ? "active" : ""}
+          >
             <FaTachometerAlt /> Dashboard
           </Link>
-          <Link to="/admin/users" className={location.pathname === "/admin/users" ? "active" : ""}>
-            <FaUsers /> Users
+          <Link
+            to="/admin/activities/create"
+            className={location.pathname === "/admin/dashboard" ? "active" : ""}
+          >
+            <FaTachometerAlt /> Create Activity
           </Link>
-          <Link to="/admin/activities" className={location.pathname === "/admin/activities" ? "active" : ""}>
-            <FaCalendar /> Activities
+          <Link
+            to="/admin/accounts"
+            className={location.pathname === "/admin/users" ? "active" : ""}
+          >
+            <FaUsers /> Account Management
           </Link>
-          <Link to="/admin/settings" className={location.pathname === "/admin/settings" ? "active" : ""}>
+
+          <Link
+            to="/admin/activities"
+            className={location.pathname === "/admin/users" ? "active" : ""}
+          >
+            <FaUsers /> Activity Management
+          </Link>
+          <Link
+            to="/admin/users"
+            className={location.pathname === "/admin/users" ? "active" : ""}
+          >
+            <FaUsers /> Activity Management
+          </Link>
+          <Link
+            to="/admin/settings"
+            className={location.pathname === "/admin/settings" ? "active" : ""}
+          >
             <FaCog /> Settings
           </Link>
           <button onClick={handleLogout} className="logout-btn">
@@ -62,7 +94,7 @@ const AdminLayout = () => {
           </button>
         </nav>
       </aside>
-      <main className={`dashboard-content ${isSidebarOpen ? '' : 'expanded'}`}>
+      <main className={`dashboard-content ${isSidebarOpen ? "" : "expanded"}`}>
         <Outlet />
       </main>
     </div>
