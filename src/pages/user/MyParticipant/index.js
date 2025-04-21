@@ -297,6 +297,17 @@ const MyParticipant = () => {
                       <span className={`status-badge role-${participant.participationRole.toLowerCase()}`}>
                         {participant.participationRole}
                       </span>
+                      {participant.participationRole === "CONTRIBUTOR" && (
+                        <button
+                          className="manage-btn"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent activity card click
+                            navigate(`/admin/activities/${participant.activity_id}/participants`);
+                          }}
+                        >
+                          Manage Participants
+                        </button>
+                      )}
                     </div>
                     <span className="registration-time">
                       {new Date(participant.registrationTime).toLocaleString("en-US", {
