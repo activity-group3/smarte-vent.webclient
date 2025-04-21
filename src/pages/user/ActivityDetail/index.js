@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FaArrowLeft, FaClock, FaMapMarkerAlt, FaUsers } from "react-icons/fa";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Button
+} from '@mui/material';
 import "./activityDetail.css";
 
 const ActivityDetail = () => {
@@ -11,6 +22,8 @@ const ActivityDetail = () => {
   const [error, setError] = useState(null);
   const [joining, setJoining] = useState(false);
   const [joinError, setJoinError] = useState(null);
+  const [participationRole, setParticipationRole] = useState("PARTICIPANT");
+  const [openJoinDialog, setOpenJoinDialog] = useState(false);
 
   useEffect(() => {
     fetchActivityDetail();
@@ -38,6 +51,20 @@ const ActivityDetail = () => {
     }
   };
 
+  const handleOpenJoinDialog = () => {
+    setOpenJoinDialog(true);
+    setJoinError(null);
+  };
+
+  const handleCloseJoinDialog = () => {
+    setOpenJoinDialog(false);
+    setJoinError(null);
+  };
+
+  const handleRoleChange = (event) => {
+    setParticipationRole(event.target.value);
+  };
+
   const handleJoinActivity = async () => {
     setJoining(true);
     setJoinError(null);
@@ -51,13 +78,13 @@ const ActivityDetail = () => {
         },
         body: JSON.stringify({
           activity_id: id,
-          role: "PARTICIPANT",
+          role: participationRole,
         }),
       });
 
       const data = await response.json();
       if (data.status_code <= 400) {
-        // Navigate to my activities page after successful join
+        setOpenJoinDialog(false);
         navigate("/my-activities");
       } else {
         setJoinError(data.message || "Failed to join activity");
@@ -165,13 +192,38 @@ const ActivityDetail = () => {
             {joinError && <div className="error-message">{joinError}</div>}
             <button
               className="join-button"
-              onClick={handleJoinActivity}
-              disabled={
-                joining || activity.activity_status !== "WAITING_TO_START"
-              }
+              onClick={handleOpenJoinDialog}
+              disabled={activity.activity_status !== "WAITING_TO_START"}
             >
-              {joining ? "Joining..." : "Join Activity"}
+              Join Activity
             </button>
+
+            <Dialog open={openJoinDialog} onClose={handleCloseJoinDialog}>
+              <DialogTitle>Join Activity</DialogTitle>
+              <DialogContent>
+                <FormControl fullWidth sx={{ mt: 2 }}>
+                  <InputLabel>Select Role</InputLabel>
+                  <Select
+                    value={participationRole}
+                    label="Select Role"
+                    onChange={handleRoleChange}
+                  >
+                    <MenuItem value="PARTICIPANT">Participant</MenuItem>
+                    <MenuItem value="CONTRIBUTOR">Contributor</MenuItem>
+                  </Select>
+                </FormControl>
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCloseJoinDialog}>Cancel</Button>
+                <Button 
+                  onClick={handleJoinActivity}
+                  disabled={joining}
+                  variant="contained"
+                >
+                  {joining ? "Joining..." : "Confirm"}
+                </Button>
+              </DialogActions>
+            </Dialog>
           </div>
         </div>
 

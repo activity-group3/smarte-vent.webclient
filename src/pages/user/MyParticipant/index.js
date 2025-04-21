@@ -7,7 +7,12 @@ const MyParticipant = () => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  const [verifyDialog, setVerifyDialog] = useState({
+    open: false,
+    activityId: null,
+    studentCode: "",
+    participantRole: "PARTICIPANT"
+  });
   const [filters, setFilters] = useState({
     page: 1,
     size: 1,
@@ -288,6 +293,9 @@ const MyParticipant = () => {
                       </span>
                       <span className={`status-badge ${participant.participationStatus.toLowerCase()}`}>
                         {participant.participationStatus.replace(/_/g, " ")}
+                      </span>
+                      <span className={`status-badge role-${participant.participationRole.toLowerCase()}`}>
+                        {participant.participationRole}
                       </span>
                     </div>
                     <span className="registration-time">
