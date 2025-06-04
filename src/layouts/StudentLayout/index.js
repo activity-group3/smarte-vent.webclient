@@ -1,0 +1,302 @@
+import React, { useState, useEffect } from "react";
+import { Link, useLocation, useNavigate, Outlet, NavLink } from "react-router-dom";
+import {
+  FaSignOutAlt,
+  FaSun,
+  FaMoon,
+  FaCalendar,
+  FaUser,
+  FaCog,
+  FaPlus,
+  FaTachometerAlt,
+  FaBars,
+  FaTimes,
+  FaUserCircle,
+  FaBell,
+  FaChartBar,
+  FaClipboardCheck,
+  FaCertificate,
+  FaBook,
+  FaGraduationCap,
+  FaHistory,
+  FaStar,
+  FaUserCog,
+} from "react-icons/fa";
+import NotificationDropdown from "../../components/NotificationDropdown";
+import AccountManagementModal from "../../components/AccountManagementModal";
+import "./dashboardLayout.css";
+
+const StudentLayout = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [user, setUser] = useState(null);
+  const [theme, setTheme] = useState("light");
+  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+
+  useEffect(() => {
+    const userData = localStorage.getItem("user");
+    if (!userData) {
+      navigate("/auth/login");
+      return;
+    }
+    const user = JSON.parse(userData);
+    if (user.role !== "STUDENT") {
+      navigate("/dashboard");
+      return;
+    }
+    setUser(user);
+
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+      localStorage.setItem("theme", "dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("theme", "light");
+    }
+  }, [theme]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("user");
+    navigate("/auth/login");
+  };
+
+  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
+  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
+  const toggleProfileMenu = () => setProfileMenuOpen(!profileMenuOpen);
+  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+
+  const navigationItems = [
+    {
+      path: "/dashboard",
+      icon: <FaTachometerAlt />,
+      label: "Dashboard",
+      exact: true
+    },
+    {
+      path: "/my-participation",
+      icon: <FaClipboardCheck />,
+      label: "My Participation",
+      exact: false
+    },
+    {
+      path: "/my-activities/contributor",
+      icon: <FaUser />,
+      label: "My Contributions",
+      exact: false
+    },
+    // {
+    //   path: "/organizations",
+    //   icon: <FaGraduationCap />,
+    //   label: "Organizations",
+    //   exact: true
+    // },
+    {
+      path: "/my-analysis",
+      icon: <FaChartBar />,
+      label: "My Analysis",
+      exact: false
+    },
+  ];
+
+  return (
+    <div className="dashboard">
+      {/* Mobile menu button */}
+      <button
+        onClick={toggleMobileSidebar}
+        className="md:hidden fixed top-4 left-4 z-50 bg-white dark:bg-gray-800 p-2 rounded-md shadow-md"
+      >
+        {isMobileOpen ? <FaTimes /> : <FaBars />}
+      </button>
+
+      {isMobileOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={toggleMobileSidebar}
+        />
+      )}
+
+      {/* Top Header - Transparent with only bell and user */}
+      <div className="fixed top-0 right-0 z-50 h-16 flex items-center justify-end pr-4">
+        <div className="flex items-center space-x-4">
+          {/* Notification Dropdown */}
+          <div className="relative">
+            <NotificationDropdown />
+          </div>
+
+          {/* Profile Menu */}
+          <div className="relative">
+            <button
+              onClick={toggleProfileMenu}
+              className="flex items-center text-white hover:text-gray-200 focus:outline-none"
+            >
+              <div className="h-8 w-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                {user?.name?.charAt(0) || "S"}
+              </div>
+              <span className="ml-2 font-medium hidden lg:block">
+                {user?.name || "User"}
+              </span>
+            </button>
+
+            {profileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-50">
+                <button
+                  onClick={() => {
+                    setAccountModalOpen(true);
+                    setProfileMenuOpen(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <FaUserCog className="w-4 h-4 mr-2" />
+                  <span>Account Settings</span>
+                </button>
+                <button
+                  onClick={toggleTheme}
+                  className="flex w-full items-center px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  {theme === "light" ? <FaMoon className="w-4 h-4 mr-2" /> : <FaSun className="w-4 h-4 mr-2" />}
+                  <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center px-4 py-2 text-sm text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  <FaSignOutAlt className="mr-2" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Sidebar */}
+      <aside
+        className={`${isMobileOpen ? "translate-x-0" : "-translate-x-full"
+          } 
+        md:translate-x-0 fixed md:relative z-50 transition-all duration-300 
+        ${isCollapsed ? "w-20" : "w-64"} bg-white dark:bg-slate-800 shadow-lg`}
+      >
+        <div className="flex flex-col h-full">
+          {/* Profile Section */}
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <div>
+              <h2
+                className={`text-xl font-bold text-gray-800 dark:text-white ${isCollapsed ? "hidden" : "block"
+                  }`}
+              >
+                Student Portal
+              </h2>
+              <p
+                className={`text-sm text-gray-600 dark:text-gray-300 mt-1 ${isCollapsed ? "hidden" : "block"
+                  }`}
+              >
+                {user?.name || "Student"}
+              </p>
+            </div>
+            <button
+              onClick={toggleSidebar}
+              className="hidden md:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
+            >
+              {isCollapsed ? (
+                <FaBars className="w-5 h-5" />
+              ) : (
+                <FaTimes className="w-5 h-5" />
+              )}
+            </button>
+          </div>
+
+          {/* Navigation */}
+          <nav className="flex-1 p-4 overflow-y-auto">
+            <ul className="space-y-2">
+              {navigationItems.map((item) => {
+                return (
+                  <li key={item.path} className="px-2">
+                    <NavLink
+                      to={item.path}
+                      end={item.exact}
+                      className={({ isActive: isNavActive }) =>
+                        `nav-link flex items-center rounded-lg transition-all duration-200 ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
+                        } ${isNavActive
+                          ? "nav-item-active bg-blue-500 text-white shadow-md"
+                          : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
+                        }`
+                      }
+                      onClick={() => {
+                        if (isMobileOpen) {
+                          toggleMobileSidebar();
+                        }
+                      }}
+                    >
+                      <span className="text-lg">{item.icon}</span>
+                      {!isCollapsed && (
+                        <span className="nav-text ml-3 font-medium">{item.label}</span>
+                      )}
+                    </NavLink>
+                  </li>
+                );
+              })}
+            </ul>
+          </nav>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col items-center justify-between space-y-2">
+              <button
+                onClick={handleLogout}
+                className="flex items-center w-full px-4 py-2 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              >
+                <FaSignOutAlt className="w-5 h-5" />
+                {!isCollapsed && <span className="ml-5">Logout</span>}
+              </button>
+              <button
+                onClick={toggleTheme}
+                className="flex items-center w-full px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              >
+                {theme === "light" ? (
+                  <FaMoon className="w-5 h-5" />
+                ) : (
+                  <FaSun className="w-5 h-5" />
+                )}
+                {!isCollapsed && (
+                  <span className="ml-5">
+                    {theme === "light" ? "Dark Mode" : "Light Mode"}
+                  </span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main
+        className={`flex-1 pt-16 md:pt-0 md:pl-${isCollapsed ? "20" : "64"
+          } transition-all duration-300 overflow-y-auto`}
+      >
+        <div className="p-6">
+          <Outlet />
+        </div>
+      </main>
+
+      {/* Account Management Modal */}
+      <AccountManagementModal
+        open={accountModalOpen}
+        onClose={() => setAccountModalOpen(false)}
+      />
+    </div>
+  );
+};
+
+export default StudentLayout;

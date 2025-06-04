@@ -9,11 +9,12 @@
   width: 250px;
   background-color: #2c3e50;
   color: white;
-  padding: 2rem;
-  transition: transform 0.3s ease;
+  padding: 1rem 0;
+  transition: all 0.3s ease;
   position: fixed;
   height: 100vh;
   z-index: 1000;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar.closed {
@@ -46,8 +47,54 @@
 .dashboard-content {
   flex: 1;
   margin-left: 250px;
-  transition: margin-left 0.3s ease;
+  transition: all 0.3s ease;
   width: calc(100% - 250px);
+  background-color: #f9fafb;
+}
+
+/* Active navigation item styles */
+.nav-item-active {
+  background-color: #3b82f6 !important;
+  color: white !important;
+  font-weight: 500;
+  transform: translateX(4px);
+  box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.nav-item-active:hover {
+  background-color: #2563eb !important;
+}
+
+/* Smooth transitions */
+.nav-link {
+  transition: all 0.2s ease-in-out;
+}
+
+/* Collapsed state adjustments */
+.sidebar.collapsed {
+  width: 80px;
+  padding: 1rem 0.5rem;
+}
+
+.sidebar.collapsed .sidebar-header,
+.sidebar.collapsed .nav-text {
+  display: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .dashboard-content {
+    margin-left: 0;
+    width: 100%;
+  }
 }
 
 .dashboard-content.expanded {

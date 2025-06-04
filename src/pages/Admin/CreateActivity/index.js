@@ -1,7 +1,67 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaPlus, FaTrash } from "react-icons/fa";
-import "./createActivity.css";
+import {
+  Box,
+  Typography,
+  TextField,
+  Select,
+  MenuItem,
+  Button,
+  IconButton,
+  CircularProgress,
+  Alert,
+  styled,
+  FormControl,
+  InputLabel,
+  TextareaAutosize,
+} from "@mui/material";
+import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import "tailwindcss/tailwind.css";
+import MapLocationPicker from "@/components/MapLocationPicker";
+
+// Custom styled components using Material-UI with Tailwind classes
+const StyledTextField = styled(TextField)(({ theme }) => ({
+  "& .MuiOutlinedInput-root": {
+    borderRadius: "0.5rem",
+    backgroundColor: theme.palette.background.default,
+    "&:hover fieldset": {
+      borderColor: theme.palette.primary.main,
+    },
+  },
+}));
+
+const StyledSelect = styled(Select)(({ theme }) => ({
+  borderRadius: "0.5rem",
+  backgroundColor: theme.palette.background.default,
+  "&:hover .MuiOutlinedInput-notchedOutline": {
+    borderColor: theme.palette.primary.main,
+  },
+}));
+
+const StyledButton = styled(Button)(({ theme }) => ({
+  borderRadius: "0.5rem",
+  padding: theme.spacing(1, 3),
+  textTransform: "none",
+  fontWeight: 600,
+}));
+
+const StyledTextarea = styled(TextareaAutosize)(({ theme }) => ({
+  width: "100%",
+  padding: theme.spacing(1.5),
+  borderRadius: "0.5rem",
+  border: `1px solid ${theme.palette.divider}`,
+  backgroundColor: theme.palette.background.default,
+  fontFamily: theme.typography.fontFamily,
+  fontSize: "1rem",
+  "&:hover": {
+    borderColor: theme.palette.primary.main,
+  },
+  "&:focus": {
+    outline: "none",
+    borderColor: theme.palette.primary.main,
+    boxShadow: `0 0 0 2px ${theme.palette.primary.light}`,
+  },
+}));
 
 const CreateActivity = () => {
   const navigate = useNavigate();
@@ -23,7 +83,7 @@ const CreateActivity = () => {
     start_date: "",
     end_date: "",
     activity_venue: "",
-    activity_status: "WAITING_TO_START",
+    activity_status: "SPENDING",
     capacity_limit: "",
     activity_type: "",
     activity_category: "UNIVERSITY",
@@ -32,12 +92,23 @@ const CreateActivity = () => {
     activity_link: "",
     attendance_score_unit: "",
     representative_organizer_id: "",
+    // Add new fields
+    short_description: "",
+    tags: [],
+    current_participants: 0,
+    address: "",
+    latitude: "",
+    longitude: "",
+    fee: "",
+    is_featured: false,
+    is_approved: false,
+    likes: 0,
+    registration_deadline: "",
   });
 
   // Convert datetime-local (e.g., "2025-06-15T09:00") to Instant (e.g., "2025-06-15T09:00:00Z")
   const toInstant = (datetime) => {
     if (!datetime) return "";
-    // Append seconds and UTC 'Z' if not present
     return datetime.endsWith("Z") ? datetime : `${datetime}:00Z`;
   };
 
@@ -46,14 +117,19 @@ const CreateActivity = () => {
     setLoading(true);
     setError(null);
 
-    // Convert datetime fields to Instant format
     const formattedFormData = {
       ...formData,
       start_date: toInstant(formData.start_date),
       end_date: toInstant(formData.end_date),
+      registration_deadline: toInstant(formData.registration_deadline),
       capacity_limit: parseInt(formData.capacity_limit) || 0,
-      representative_organizer_id: parseInt(formData.representative_organizer_id) || 0,
+      representative_organizer_id:
+        parseInt(formData.representative_organizer_id) || 0,
       attendance_score_unit: formData.attendance_score_unit || "0",
+      current_participants: parseInt(formData.current_participants) || 0,
+      latitude: parseFloat(formData.latitude) || null,
+      longitude: parseFloat(formData.longitude) || null,
+      likes: parseInt(formData.likes) || 0,
       activity_schedules: schedules.map((schedule) => ({
         ...schedule,
         start_time: toInstant(schedule.start_time),
@@ -73,10 +149,11 @@ const CreateActivity = () => {
       });
 
       const data = await response.json();
-      if (data.status_code === 200) {
-        navigate("/dashboard");
+      if (response.status === 201) {
+        alert('Activity created successfully!');
+        navigate("/organization/dashboard");
       } else {
-        setError(data.message || "Failed to create activity");
+        setError(data.message || `Failed to create activity. Status: ${response.status}`);
       }
     } catch (err) {
       setError("Network error: " + err.message);
@@ -122,277 +199,448 @@ const CreateActivity = () => {
   };
 
   return (
-    <div className="create-activity">
-      <h1>Create New Activity</h1>
-      {error && <div className="error-message">{error}</div>}
+    <Box className="p-6 bg-gray-50 min-h-screen">
+      <Typography variant="h4" className="text-gray-800 font-bold mb-6">
+        Create New Activity
+      </Typography>
 
-      <form onSubmit={handleSubmit} className="create-form">
+      {error && (
+        <Alert severity="error" className="mb-6">
+          {error}
+        </Alert>
+      )}
+
+      <Box
+        component="form"
+        onSubmit={handleSubmit}
+        className="bg-white p-6 rounded-lg shadow-md space-y-6"
+      >
         {/* Activity Name */}
-        <div className="form-group">
-          <label>Activity Name</label>
-          <input
-            type="text"
-            name="activity_name"
-            value={formData.activity_name}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <StyledTextField
+          fullWidth
+          label="Activity Name"
+          name="activity_name"
+          value={formData.activity_name}
+          onChange={handleChange}
+          required
+          variant="outlined"
+        />
 
         {/* Description */}
-        <div className="form-group">
-          <label>Description</label>
-          <textarea
+        <Box>
+          <InputLabel className="text-gray-700 mb-2">Description</InputLabel>
+          <StyledTextarea
+            minRows={4}
             name="description"
             value={formData.description}
             onChange={handleChange}
             required
           />
-        </div>
+        </Box>
 
         {/* Start and End Date */}
-        <div className="form-row">
-          <div className="form-group">
-            <label>Start Date</label>
-            <input
-              type="datetime-local"
-              name="start_date"
-              value={formData.start_date}
-              onChange={handleChange}
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label>End Date</label>
-            <input
-              type="datetime-local"
-              name="end_date"
-              value={formData.end_date}
-              onChange={handleChange}
-              required
-            />
-          </div>
-        </div>
-
-        {/* Activity Venue */}
-        <div className="form-group">
-          <label>Venue</label>
-          <input
-            type="text"
-            name="activity_venue"
-            value={formData.activity_venue}
+        <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <StyledTextField
+            fullWidth
+            label="Start Date"
+            type="datetime-local"
+            name="start_date"
+            value={formData.start_date}
             onChange={handleChange}
             required
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
+          <StyledTextField
+            fullWidth
+            label="End Date"
+            type="datetime-local"
+            name="end_date"
+            value={formData.end_date}
+            onChange={handleChange}
+            required
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+
+        {/* Activity Venue */}
+        <StyledTextField
+          fullWidth
+          label="Venue"
+          name="activity_venue"
+          value={formData.activity_venue}
+          onChange={handleChange}
+          required
+          variant="outlined"
+        />
 
         {/* Activity Status */}
-        <div className="form-group">
-          <label>Status</label>
-          <select
+        {/* <FormControl fullWidth>
+          <InputLabel>Status</InputLabel>
+          <StyledSelect
             name="activity_status"
             value={formData.activity_status}
             onChange={handleChange}
             required
           >
-            <option value="WAITING_TO_START">Waiting to Start</option>
-            <option value="ONGOING">Ongoing</option>
-            <option value="COMPLETED">Completed</option>
-          </select>
-        </div>
+            <MenuItem value="IN_PROGRESS">Waiting to Start</MenuItem>
+            <MenuItem value="ONGOING">Ongoing</MenuItem>
+            {/* <MenuItem value="COMPLETED">Completed</MenuItem> */}
+            {/* <MenuItem value="PUBLISHED">PUBLISHED</MenuItem> */}
+            {/* <MenuItem value="CANCELLED">CANCELLED</MenuItem> */}
+
+          {/* </StyledSelect> */}
+        {/* </FormControl> */}
 
         {/* Capacity Limit */}
-        <div className="form-group">
-          <label>Capacity Limit</label>
-          <input
-            type="number"
-            name="capacity_limit"
-            value={formData.capacity_limit}
-            onChange={handleChange}
-            required
-            min="1"
-          />
-        </div>
+        <StyledTextField
+          fullWidth
+          label="Capacity Limit"
+          type="number"
+          name="capacity_limit"
+          value={formData.capacity_limit}
+          onChange={handleChange}
+          required
+          inputProps={{ min: 1 }}
+          variant="outlined"
+        />
 
         {/* Activity Type */}
-        <div className="form-group">
-          <label>Activity Type</label>
-          <input
-            type="text"
-            name="activity_type"
-            value={formData.activity_type}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        {/* <StyledTextField
+          fullWidth
+          label="Activity Type"
+          name="activity_type"
+          value={formData.activity_type}
+          onChange={handleChange}
+          required
+          variant="outlined"
+        /> */}
 
         {/* Activity Category */}
-        <div className="form-group">
-          <label>Category</label>
-          <select
+        <FormControl fullWidth>
+          <InputLabel>Category</InputLabel>
+          <StyledSelect
             name="activity_category"
             value={formData.activity_category}
             onChange={handleChange}
             required
           >
-            <option value="UNIVERSITY">University</option>
-            <option value="COMMUNITY">Community</option>
-            <option value="PROFESSIONAL">Professional</option>
-          </select>
-        </div>
+            <MenuItem value="STUDENT_ORGANIZATION">Student Organization</MenuItem>
+            <MenuItem value="UNIVERSITY">University</MenuItem>
+            <MenuItem value="THIRD_PARTY">Third Party</MenuItem>
+          </StyledSelect>
+        </FormControl>
 
         {/* Detailed Description */}
-        <div className="form-group">
-          <label>Detailed Description</label>
-          <textarea
+        <Box>
+          <InputLabel className="text-gray-700 mb-2">
+            Detailed Description
+          </InputLabel>
+          <StyledTextarea
+            minRows={4}
             name="activity_description"
             value={formData.activity_description}
             onChange={handleChange}
             required
           />
-        </div>
+        </Box>
 
         {/* Activity Image */}
-        <div className="form-group">
-          <label>Image URL</label>
-          <input
-            type="url"
-            name="activity_image"
-            value={formData.activity_image}
-            onChange={handleChange}
-            placeholder="https://example.com/image.jpg"
-          />
-        </div>
+        <StyledTextField
+          fullWidth
+          label="Image URL"
+          name="activity_image"
+          value={formData.activity_image}
+          onChange={handleChange}
+          placeholder="https://example.com/image.jpg"
+          variant="outlined"
+        />
 
         {/* Activity Link */}
-        <div className="form-group">
-          <label>Event Link</label>
-          <input
-            type="url"
-            name="activity_link"
-            value={formData.activity_link}
-            onChange={handleChange}
-            placeholder="https://example.com/event"
-          />
-        </div>
+        <StyledTextField
+          fullWidth
+          label="Event Link"
+          name="activity_link"
+          value={formData.activity_link}
+          onChange={handleChange}
+          placeholder="https://example.com/event"
+          variant="outlined"
+        />
 
         {/* Attendance Score Unit */}
-        <div className="form-group">
-          <label>Attendance Score Unit</label>
-          <input
-            type="text"
-            name="attendance_score_unit"
-            value={formData.attendance_score_unit}
-            onChange={handleChange}
-            required
-          />
-        </div>
+        <StyledTextField
+          fullWidth
+          label="Attendance Score Unit"
+          name="attendance_score_unit"
+          value={formData.attendance_score_unit}
+          onChange={handleChange}
+          required
+          variant="outlined"
+        />
 
         {/* Representative Organizer ID */}
-        <div className="form-group">
-          <label>Organizer ID</label>
-          <input
-            type="number"
-            name="representative_organizer_id"
-            value={formData.representative_organizer_id}
-            onChange={handleChange}
-            required
-            min="1"
+        {/* <StyledTextField
+          fullWidth
+          label="Organizer ID"
+          type="number"
+          name="representative_organizer_id"
+          value={formData.representative_organizer_id}
+          onChange={handleChange}
+          required
+          inputProps={{ min: 1 }}
+          variant="outlined"
+        /> */}
+
+        {/* Short Description */}
+        <StyledTextField
+          fullWidth
+          label="Short Description"
+          name="short_description"
+          value={formData.short_description}
+          onChange={handleChange}
+          variant="outlined"
+          multiline
+          rows={2}
+        />
+
+        {/* Tags */}
+        <StyledTextField
+          fullWidth
+          label="Tags (comma-separated)"
+          name="tags"
+          value={formData.tags.join(", ")}
+          onChange={(e) => {
+            const tagsArray = e.target.value
+              .split(",")
+              .map((tag) => tag.trim());
+            setFormData((prev) => ({
+              ...prev,
+              tags: tagsArray,
+            }));
+          }}
+          variant="outlined"
+          placeholder="e.g. workshop, technology, career"
+        />
+
+        {/* Location Details */}
+        <Box className="space-y-4">
+          <Typography variant="h6" className="text-gray-800 font-semibold">
+            Location Details
+          </Typography>
+          <MapLocationPicker
+            onLocationSelect={({ address, latitude, longitude }) => {
+              setFormData((prev) => ({
+                ...prev,
+                address,
+                latitude: latitude.toString(),
+                longitude: longitude.toString(),
+              }));
+            }}
           />
-        </div>
+          <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <StyledTextField
+              fullWidth
+              label="Address"
+              name="address"
+              value={formData.address}
+              onChange={handleChange}
+              variant="outlined"
+              disabled
+            />
+            <Box className="grid grid-cols-2 gap-4">
+              <StyledTextField
+                fullWidth
+                label="Latitude"
+                name="latitude"
+                type="number"
+                value={formData.latitude}
+                onChange={handleChange}
+                variant="outlined"
+                disabled
+              />
+              <StyledTextField
+                fullWidth
+                label="Longitude"
+                name="longitude"
+                type="number"
+                value={formData.longitude}
+                onChange={handleChange}
+                variant="outlined"
+                disabled
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Fee */}
+        <StyledTextField
+          fullWidth
+          label="Fee"
+          name="fee"
+          value={formData.fee}
+          onChange={handleChange}
+          variant="outlined"
+          placeholder="Free or amount"
+        />
+
+        {/* Registration Deadline */}
+        <StyledTextField
+          fullWidth
+          label="Registration Deadline"
+          type="datetime-local"
+          name="registration_deadline"
+          value={formData.registration_deadline}
+          onChange={handleChange}
+          InputLabelProps={{ shrink: true }}
+          variant="outlined"
+        />
+
+        {/* Featured and Approved Status */}
+        <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormControl>
+            <InputLabel>Featured Status</InputLabel>
+            <StyledSelect
+              name="is_featured"
+              value={formData.is_featured}
+              onChange={handleChange}
+            >
+              <MenuItem value={true}>Featured</MenuItem>
+              <MenuItem value={false}>Not Featured</MenuItem>
+            </StyledSelect>
+          </FormControl>
+
+          <FormControl>
+            <InputLabel>Approval Status</InputLabel>
+            <StyledSelect
+              name="is_approved"
+              value={formData.is_approved}
+              // onChange={handleChange}
+            >
+              <MenuItem value={true}>Approved</MenuItem>
+              <MenuItem value={false}>Not Approved</MenuItem>
+            </StyledSelect>
+          </FormControl>
+        </Box>
 
         {/* Activity Schedules */}
-        <div className="schedules-section">
-          <h2>Activity Schedules</h2>
+        <Box className="space-y-4">
+          <Typography variant="h6" className="text-gray-800 font-semibold">
+            Activity Schedules
+          </Typography>
           {schedules.map((schedule, index) => (
-            <div key={index} className="schedule-item">
-              <div className="schedule-header">
-                <h3>Schedule {index + 1}</h3>
+            <Box
+              key={index}
+              className="p-4 bg-gray-50 rounded-lg shadow-sm space-y-4"
+            >
+              <Box className="flex justify-between items-center">
+                <Typography
+                  variant="subtitle1"
+                  className="text-gray-700 font-medium"
+                >
+                  Schedule {index + 1}
+                </Typography>
                 {schedules.length > 1 && (
-                  <button
-                    type="button"
+                  <IconButton
+                    color="error"
                     onClick={() => removeSchedule(index)}
-                    className="remove-schedule"
+                    className="hover:text-red-600"
                   >
-                    <FaTrash />
-                  </button>
+                    <DeleteIcon />
+                  </IconButton>
                 )}
-              </div>
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Start Time</label>
-                  <input
-                    type="datetime-local"
-                    value={schedule.start_time}
-                    onChange={(e) =>
-                      handleScheduleChange(index, "start_time", e.target.value)
-                    }
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label>End Time</label>
-                  <input
-                    type="datetime-local"
-                    value={schedule.end_time}
-                    onChange={(e) =>
-                      handleScheduleChange(index, "end_time", e.target.value)
-                    }
-                    required
-                  />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Schedule Description</label>
-                <textarea
+              </Box>
+              <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <StyledTextField
+                  fullWidth
+                  label="Start Time"
+                  type="datetime-local"
+                  value={schedule.start_time}
+                  onChange={(e) =>
+                    handleScheduleChange(index, "start_time", e.target.value)
+                  }
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  variant="outlined"
+                />
+                <StyledTextField
+                  fullWidth
+                  label="End Time"
+                  type="datetime-local"
+                  value={schedule.end_time}
+                  onChange={(e) =>
+                    handleScheduleChange(index, "end_time", e.target.value)
+                  }
+                  required
+                  InputLabelProps={{ shrink: true }}
+                  variant="outlined"
+                />
+              </Box>
+              <Box>
+                <InputLabel className="text-gray-700 mb-2">
+                  Schedule Description
+                </InputLabel>
+                <StyledTextarea
+                  minRows={3}
                   value={schedule.activity_description}
                   onChange={(e) =>
-                    handleScheduleChange(index, "activity_description", e.target.value)
+                    handleScheduleChange(
+                      index,
+                      "activity_description",
+                      e.target.value
+                    )
                   }
                   required
                 />
-              </div>
-              <div className="form-group">
-                <label>Status</label>
-                <select
+              </Box>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <StyledSelect
                   value={schedule.status}
                   onChange={(e) =>
                     handleScheduleChange(index, "status", e.target.value)
                   }
                   required
                 >
-                  <option value="WAITING_TO_START">Waiting to Start</option>
-                  <option value="ONGOING">Ongoing</option>
-                  <option value="COMPLETED">Completed</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Location</label>
-                <input
-                  type="text"
-                  value={schedule.location}
-                  onChange={(e) =>
-                    handleScheduleChange(index, "location", e.target.value)
-                  }
-                  required
-                />
-              </div>
-            </div>
+                  <MenuItem value="WAITING_TO_START">Waiting to Start</MenuItem>
+                  <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
+                  <MenuItem value="COMPLETED">Completed</MenuItem>
+                </StyledSelect>
+              </FormControl>
+              <StyledTextField
+                fullWidth
+                label="Location"
+                value={schedule.location}
+                onChange={(e) =>
+                  handleScheduleChange(index, "location", e.target.value)
+                }
+                required
+                variant="outlined"
+              />
+            </Box>
           ))}
-          <button
-            type="button"
+          <StyledButton
+            variant="outlined"
+            startIcon={<AddIcon />}
             onClick={addSchedule}
-            className="add-schedule-btn"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50"
           >
-            <FaPlus /> Add Schedule
-          </button>
-        </div>
+            Add Schedule
+          </StyledButton>
+        </Box>
 
-        <button type="submit" className="submit-btn" disabled={loading}>
-          {loading ? "Creating..." : "Create Activity"}
-        </button>
-      </form>
-    </div>
+        <StyledButton
+          type="submit"
+          variant="contained"
+          disabled={loading}
+          className="w-full bg-blue-600 hover:bg-blue-700"
+        >
+          {loading ? (
+            <CircularProgress size={24} color="inherit" />
+          ) : (
+            "Create Activity"
+          )}
+        </StyledButton>
+      </Box>
+    </Box>
   );
 };
 

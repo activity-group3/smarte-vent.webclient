@@ -15,15 +15,37 @@ import {
   Chip,
   IconButton,
   Pagination,
+  InputLabel,
+  TextField,
+  Button,
+  Collapse,
+  Grid,
 } from "@mui/material";
-import { Edit as EditIcon, Delete as DeleteIcon } from "@mui/icons-material";
+import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
+import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import {
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  CheckCircle as ApproveIcon,
+  Cancel as DisapproveIcon,
+} from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
+import "tailwindcss/tailwind.css";
+import {
+  FaSearch,
+  FaFilter,
+  FaCalendar,
+  FaCalendarCheck,
+  FaCheck,
+} from "react-icons/fa";
+import ActivityUpdateForm from "@/components/ActivityUpdateForm";
 
 const ActivityStatus = {
-  WAITING_TO_START: "WAITING_TO_START",
   IN_PROGRESS: "IN_PROGRESS",
   COMPLETED: "COMPLETED",
+  PUBLISHED: "PUBLISHED",
   CANCELLED: "CANCELLED",
+  PENDING: "PENDING",
 };
 
 const ActivityCategory = {
@@ -35,6 +57,7 @@ const ActivityCategory = {
 
 const SortFields = {
   START_DATE: "startDate",
+  END_DATE: "endDate",
   ACTIVITY_NAME: "activityName",
   ACTIVITY_STATUS: "activityStatus",
   ACTIVITY_CATEGORY: "activityCategory",
@@ -46,18 +69,26 @@ const AdminActivityManage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
-    status: "",
-    category: "",
+    status: ActivityStatus.PENDING, // Default to PENDING for admin view
+    category: ActivityCategory.UNIVERSITY,
+    startDateFrom: null,
+    startDateTo: null,
   });
+
   const [sorting, setSorting] = useState({
     field: SortFields.START_DATE,
     direction: "desc",
   });
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [showUpdateForm, setShowUpdateForm] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSortChange = (field) => {
     setSorting((prev) => ({
       field,
-      direction: prev.field === field && prev.direction === "asc" ? "desc" : "asc",
+      direction:
+        prev.field === field && prev.direction === "asc" ? "desc" : "asc",
     }));
     setPage(0);
   };
@@ -73,9 +104,15 @@ const AdminActivityManage = () => {
       if (filters.category) {
         queryString += `&activity_category=${filters.category}`;
       }
+      if (filters.startDateFrom) {
+        queryString += `&startDateFrom=${filters.startDateFrom.toISOString()}`;
+      }
+      if (filters.startDateTo) {
+        queryString += `&startDateTo=${filters.startDateTo.toISOString()}`;
+      }
 
       const response = await fetch(
-        `http://localhost:8080/activities?${queryString}`,
+        `http://localhost:8080/activities/search?${queryString}`,
         {
           method: "GET",
           headers: {
@@ -111,8 +148,34 @@ const AdminActivityManage = () => {
     setPage(0);
   };
 
-  const handleEdit = (activityId) => {
-    navigate(`/admin/activities/${activityId}/edit`);
+  const handleEdit = async (activityId) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `http://localhost:8080/activities/${activityId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (data.status_code === 200) {
+        // Set the full activity data with schedules
+        setSelectedActivity(data.data);
+        setShowUpdateForm(true);
+      } else {
+        console.error("Error fetching activity details:", data.message);
+      }
+    } catch (error) {
+      console.error("Error fetching activity details:", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRemove = async (activityId) => {
@@ -131,7 +194,9 @@ const AdminActivityManage = () => {
         );
 
         if (response.ok) {
-          setActivities(activities.filter((activity) => activity.id !== activityId));
+          setActivities(
+            activities.filter((activity) => activity.id !== activityId)
+          );
         }
       } catch (error) {
         console.error("Error removing activity:", error);
@@ -139,15 +204,46 @@ const AdminActivityManage = () => {
     }
   };
 
+  const handleApprovalToggle = async (activityId, currentApprovalStatus) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const endpoint = currentApprovalStatus ? "disapprove" : "approve";
+
+      const response = await fetch(
+        `http://localhost:8080/activities/${activityId}/${endpoint}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (response.ok) {
+        // Refresh the activities list
+        fetchActivities();
+      }
+    } catch (error) {
+      console.error(
+        `Error ${currentApprovalStatus ? "disapproving" : "approving"
+        } activity:`,
+        error
+      );
+    }
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
-      case "WAITING_TO_START":
+      case ActivityStatus.PENDING:
         return "warning";
-      case "IN_PROGRESS":
+      case ActivityStatus.PUBLISHED:
         return "info";
-      case "COMPLETED":
+      case ActivityStatus.IN_PROGRESS:
+        return "primary";
+      case ActivityStatus.COMPLETED:
         return "success";
-      case "CANCELLED":
+      case ActivityStatus.CANCELLED:
         return "error";
       default:
         return "default";
@@ -178,151 +274,441 @@ const AdminActivityManage = () => {
     navigate(`/admin/activities/${activityId}`);
   };
 
+  const handleUpdateSuccess = async (updatedActivity) => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("http://localhost:8080/activities/update", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedActivity),
+      });
+
+      const data = await response.json();
+      if (data.status_code === 200) {
+        // Close the form and refresh the activity list
+        setShowUpdateForm(false);
+        setSelectedActivity(null);
+        fetchActivities();
+      } else {
+        console.error("Error updating activity:", data.message);
+      }
+    } catch (error) {
+      console.error("Error updating activity:", error);
+    }
+  };
+
+  const handleUpdateCancel = () => {
+    setShowUpdateForm(false);
+    setSelectedActivity(null);
+  };
+
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" gutterBottom>
-        Activity Management
-      </Typography>
+    <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <div className="p-6 md:p-10">
+        <header className="mb-8">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+                Activity Management
+              </h1>
+            </div>
+          </div>
+        </header>
+        <Box className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
+          {showUpdateForm ? (
+            <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
+              <Typography variant="h5" className="mb-6">
+                Update Activity
+              </Typography>
+              <ActivityUpdateForm
+                activity={selectedActivity}
+                onSubmit={handleUpdateSuccess}
+                onCancel={handleUpdateCancel}
+              />
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl p-6 text-white shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Total Activities</h3>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <FaCalendar className="text-white text-xl" />
+                    </div>
+                  </div>
+                  <p className="text-4xl font-bold">{activities.length}</p>
+                </div>
 
-      <Box sx={{ mb: 3, display: "flex", gap: 2 }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <Select
-            value={filters.status}
-            onChange={handleFilterChange("status")}
-            displayEmpty
-          >
-            <MenuItem value="">All Status</MenuItem>
-            {Object.values(ActivityStatus).map((status) => (
-              <MenuItem key={status} value={status}>
-                {status.replace(/_/g, " ")}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                <div className="bg-gradient-to-r from-pink-500 to-rose-500 rounded-2xl p-6 text-white shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Active</h3>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <FaCalendarCheck className="text-white text-xl" />
+                    </div>
+                  </div>
+                  <p className="text-4xl font-bold">
+                    {
+                      activities.filter(
+                        (a) => a.activity_status === "IN_PROGRESS"
+                      ).length
+                    }
+                  </p>
+                </div>
 
-        <FormControl sx={{ minWidth: 200 }}>
-          <Select
-            value={filters.category}
-            onChange={handleFilterChange("category")}
-            displayEmpty
-          >
-            <MenuItem value="">All Categories</MenuItem>
-            {Object.values(ActivityCategory).map((category) => (
-              <MenuItem key={category} value={category}>
-                {category.replace(/_/g, " ")}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+                <div className="bg-gradient-to-r from-cyan-500 to-blue-500 rounded-2xl p-6 text-white shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-lg font-semibold">Completed</h3>
+                    <div className="bg-white/20 p-3 rounded-full">
+                      <FaCheck className="text-white text-xl" />
+                    </div>
+                  </div>
+                  <p className="text-4xl font-bold">
+                    {
+                      activities.filter(
+                        (a) => a.activity_status === "COMPLETED"
+                      ).length
+                    }
+                  </p>
+                </div>
+              </div>
 
-        <FormControl sx={{ minWidth: 200 }}>
-          <Select
-            value={sorting.field}
-            onChange={(e) => handleSortChange(e.target.value)}
-            displayEmpty
-          >
-            <MenuItem value={SortFields.START_DATE}>Sort by Date</MenuItem>
-            <MenuItem value={SortFields.ACTIVITY_NAME}>Sort by Name</MenuItem>
-            <MenuItem value={SortFields.ACTIVITY_STATUS}>Sort by Status</MenuItem>
-            <MenuItem value={SortFields.ACTIVITY_CATEGORY}>Sort by Category</MenuItem>
-          </Select>
-        </FormControl>
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 mb-8">
+                <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+                  <div className=" bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-lg hover:scale-[1.01] transition-all duration-300 flex-1">
+                    <TextField
+                      fullWidth
+                      label="Search Activity Name"
+                      variant="outlined"
+                      size="medium"
+                      className="bg-white dark:bg-slate-700 rounded-lg"
+                      InputProps={{
+                        startAdornment: (
+                          <FaSearch className="mr-2 text-gray-400" />
+                        ),
+                      }}
+                    />
+                  </div>
 
-        <Chip
-          label={sorting.direction === "asc" ? "↑ Ascending" : "↓ Descending"}
-          color="default"
-          size="small"
-          onClick={() => handleSortChange(sorting.field)}
-        />
-      </Box>
+                  <Button
+                    variant="contained"
+                    startIcon={<FaFilter />}
+                    onClick={() => setShowFilters(!showFilters)}
+                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:from-pink-500 hover:via-purple-500 hover:to-indigo-500 transition-all duration-500"
+                  >
+                    {showFilters ? "Hide Filters" : "Show Filters"}
+                  </Button>
+                </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>ID</TableCell>
-              <TableCell>Name</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Venue</TableCell>
-              <TableCell>Start Date</TableCell>
-              <TableCell>End Date</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Capacity</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {activities.map((activity) => (
-              <TableRow 
-                key={activity.id}
-                onClick={() => handleRowClick(activity.id)}
-                sx={{ 
-                  cursor: 'pointer',
-                  '&:hover': { backgroundColor: 'rgba(0, 0, 0, 0.04)' }
-                }}
+                <Collapse in={showFilters}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} md={6}>
+                      <div className=" bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
+                        <FormControl
+                          fullWidth
+                          className="bg-white dark:bg-slate-700 rounded-lg"
+                        >
+                          <InputLabel>Category</InputLabel>
+                          <Select
+                            value={filters.category}
+                            onChange={(e) => handleFilterChange(e.target.value)}
+                            label="Category"
+                          >
+                            <MenuItem value={SortFields.START_DATE}>
+                              All Categories
+                            </MenuItem>
+
+                            {Object.values(ActivityCategory).map((category) => (
+                              <MenuItem key={category} value={category}>
+                                {category.replace(/_/g, " ")}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <div className=" bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
+                        <FormControl
+                          fullWidth
+                          className="bg-white dark:bg-slate-700 rounded-lg"
+                        >
+                          <InputLabel>Status</InputLabel>
+                          <Select
+                            value={filters.status}
+                            onChange={(e) => handleFilterChange(e.target.value)}
+                            label="Status"
+                          >
+                            <MenuItem value=""><em>All Statuses</em></MenuItem>
+                            <MenuItem value={ActivityStatus.PENDING}>Pending</MenuItem>
+                            <MenuItem value={ActivityStatus.PUBLISHED}>Published</MenuItem>
+                            <MenuItem value={ActivityStatus.IN_PROGRESS}>In Progress</MenuItem>
+                            <MenuItem value={ActivityStatus.COMPLETED}>Completed</MenuItem>
+                            <MenuItem value={ActivityStatus.CANCELLED}>Cancelled</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <div className=" bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
+                        <FormControl
+                          fullWidth
+                          className="bg-white dark:bg-slate-700 rounded-lg"
+                        >
+                          <InputLabel>Sort By</InputLabel>
+                          <Select
+                            value={sorting.field}
+                            onChange={(e) => handleSortChange(e.target.value)}
+                            label="Sort By"
+                          >
+                            <MenuItem value={SortFields.START_DATE}>
+                              Sort by Start Date
+                            </MenuItem>
+                            <MenuItem value={SortFields.END_DATE}>
+                              Sort by End Date
+                            </MenuItem>
+                            <MenuItem value={SortFields.ACTIVITY_NAME}>
+                              Sort by Name
+                            </MenuItem>
+                            <MenuItem value={SortFields.ACTIVITY_STATUS}>
+                              Sort by Status
+                            </MenuItem>
+                            <MenuItem value={SortFields.ACTIVITY_CATEGORY}>
+                              Sort by Category
+                            </MenuItem>
+                          </Select>
+                        </FormControl>
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <div className=" animate-gradient-x bg-[length:200%_200%] bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
+                        <Button
+                          fullWidth
+                          onClick={() => handleSortChange(sorting.field)}
+                          className="bg-white dark:bg-slate-700 h-[56px] rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600"
+                        >
+                          {sorting.direction === "asc"
+                            ? "↑ Ascending"
+                            : "↓ Descending"}
+                        </Button>
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <div className="relative p-[3px] bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
+                        <DateTimePicker
+                          label="Start Date From"
+                          value={filters.startDateFrom}
+                          onChange={(date) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              startDateFrom: date,
+                            }))
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </div>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                      <div className="relative p-[3px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
+                        <DateTimePicker
+                          label="Start Date To"
+                          value={filters.startDateTo}
+                          onChange={(date) =>
+                            setFilters((prev) => ({
+                              ...prev,
+                              startDateTo: date,
+                            }))
+                          }
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </div>
+                    </Grid>
+                  </Grid>
+                </Collapse>
+              </div>
+
+              <TableContainer
+                component={Paper}
+                className="shadow-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-800"
               >
-                <TableCell>{activity.id}</TableCell>
-                <TableCell>{activity.activity_name}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={activity.activity_category.replace(/_/g, " ")}
-                    color={getCategoryColor(activity.activity_category)}
-                    size="small"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell>{activity.activity_venue}</TableCell>
-                <TableCell>{formatDate(activity.start_date)}</TableCell>
-                <TableCell>{formatDate(activity.end_date)}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={activity.activity_status.replace(/_/g, " ")}
-                    color={getStatusColor(activity.activity_status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  {activity.capacity}/{activity.capacity_limit}
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    size="small"
-                    color="primary"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent row click when clicking buttons
-                      handleEdit(activity.id);
-                    }}
-                    sx={{ mr: 1 }}
-                  >
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={(e) => {
-                      e.stopPropagation(); // Prevent row click when clicking buttons
-                      handleRemove(activity.id);
-                    }}
-                  >
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow className="bg-blue-600">
+                      <TableCell className="text-white font-semibold">
+                        ID
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Name
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Category
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Venue
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Start Date
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        End Date
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Status
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Capacity
+                      </TableCell>
+                      <TableCell className="text-white font-semibold">
+                        Actions
+                      </TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {activities.map((activity) => (
+                      <TableRow
+                        key={activity.id}
+                        onClick={() => handleRowClick(activity.id)}
+                        className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      >
+                        <TableCell className="text-gray-700">
+                          {activity.id}
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {activity.activity_name}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={activity.activity_category.replace(
+                              /_/g,
+                              " "
+                            )}
+                            color={getCategoryColor(activity.activity_category)}
+                            variant="outlined"
+                            className="font-medium"
+                          />
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {activity.activity_venue}
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {formatDate(activity.start_date)}
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {formatDate(activity.end_date)}
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={activity.activity_status.replace(/_/g, " ")}
+                            color={getStatusColor(activity.activity_status)}
+                            className="font-medium"
+                          />
+                        </TableCell>
+                        <TableCell className="text-gray-700">
+                          {activity.current_participants}/
+                          {activity.capacity_limit}
+                        </TableCell>
+                        <TableCell>
+                          <IconButton
+                            size="small"
+                            color="primary"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(activity.id);
+                            }}
+                            className="mr-2 hover:bg-blue-100"
+                          >
+                            <EditIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color={activity.is_approved ? "error" : "success"}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleApprovalToggle(
+                                activity.id,
+                                activity.is_approved
+                              );
+                            }}
+                            className={`mr-2 ${activity.is_approved
+                                ? "hover:bg-red-100"
+                                : "hover:bg-green-100"
+                              }`}
+                            title={
+                              activity.is_approved
+                                ? "Disapprove Activity"
+                                : "Approve Activity"
+                            }
+                          >
+                            {activity.is_approved ? (
+                              <DisapproveIcon />
+                            ) : (
+                              <ApproveIcon />
+                            )}
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemove(activity.id);
+                            }}
+                            className="hover:bg-red-100"
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
 
-      <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
-        <Pagination
-          count={totalPages}
-          page={page + 1}
-          onChange={handlePageChange}
-          color="primary"
-        />
-      </Box>
-    </Box>
+              <Box className="mt-6 flex justify-center">
+                <Pagination
+                  count={totalPages}
+                  page={page + 1}
+                  onChange={handlePageChange}
+                  color="primary"
+                  className="bg-white shadow-sm rounded-lg p-2"
+                />
+              </Box>
+            </>
+          )}
+        </Box>
+      </div>
+    </LocalizationProvider>
   );
 };
+
+// Add this CSS animation class to your global styles or tailwind config
+const styles = `
+@keyframes gradient-x {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+}
+`;
 
 export default AdminActivityManage;

@@ -32,7 +32,7 @@ const ParticipationRole = {
 };
 
 const SortFields = {
-  REGISTRATION_TIME: "registeredAt"
+  REGISTRATION_TIME: "registeredAt",
 };
 
 const getStatusColor = (status) => {
@@ -69,6 +69,8 @@ const AdminParticipantManage = () => {
     participationRole: "",
     registeredAfter: "",
     registeredBefore: "",
+    studentCode: "", // Add this line
+    participantName: "", // Add this line
   });
   const [sorting, setSorting] = useState({
     field: SortFields.REGISTRATION_TIME,
@@ -91,10 +93,10 @@ const AdminParticipantManage = () => {
       let queryString = `activityId=${id}&page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
 
       if (filters.participationStatus) {
-        queryString += `&participationStatus=${filters.participationStatus}`;
+        queryString += `&participationStatus=${filters.participationStatus}`; // Changed from participationStatus to status
       }
       if (filters.participationRole) {
-        queryString += `&participationRole=${filters.participationRole}`;
+        queryString += `&participationRole=${filters.participationRole}`; // Changed from participationRole to role
       }
       if (filters.registeredAfter) {
         queryString += `&registeredAfter=${new Date(
@@ -105,6 +107,12 @@ const AdminParticipantManage = () => {
         queryString += `&registeredBefore=${new Date(
           filters.registeredBefore
         ).toISOString()}`;
+      }
+      if (filters.studentCode) {
+        queryString += `&studentCode=${filters.studentCode}`;
+      }
+      if (filters.participantName) {
+        queryString += `&participantName=${filters.participantName}`;
       }
 
       const response = await fetch(
@@ -317,22 +325,42 @@ const AdminParticipantManage = () => {
           InputLabelProps={{ shrink: true }}
         />
 
+        <TextField
+          label="Student Code"
+          value={filters.studentCode}
+          onChange={handleFilterChange("studentCode")}
+          placeholder="Enter student code"
+          size="small"
+        />
+
+        <TextField
+          label="Participant Name"
+          value={filters.participantName}
+          onChange={handleFilterChange("participantName")}
+          placeholder="Enter name"
+          size="small"
+        />
+
         <FormControl sx={{ minWidth: 200 }}>
           <Select
             value={sorting.field}
             onChange={(e) => handleSortChange(e.target.value)}
             displayEmpty
           >
-            <MenuItem value={SortFields.REGISTRATION_TIME}>Sort by Registration Time</MenuItem>
+            <MenuItem value={SortFields.REGISTRATION_TIME}>
+              Sort by Registration Time
+            </MenuItem>
             <MenuItem value={SortFields.ID}>Sort by ID</MenuItem>
-            <MenuItem value={SortFields.STUDENT_CODE}>Sort by Student Code</MenuItem>
+            <MenuItem value={SortFields.IDENTIFY_CODE}>
+              Sort by Student Code
+            </MenuItem>
           </Select>
         </FormControl>
 
         <Chip
-          label={sorting.direction === 'asc' ? '↑ Ascending' : '↓ Descending'}
+          label={sorting.direction === "asc" ? "↑ Ascending" : "↓ Descending"}
           color="default"
-          size="small"
+          size="medium"
           onClick={() => handleSortChange(sorting.field)}
         />
       </Box>
@@ -343,9 +371,7 @@ const AdminParticipantManage = () => {
             <TableRow>
               <TableCell>ID</TableCell>
               <TableCell>Student Code</TableCell>
-              <TableCell>Activity Name</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Venue</TableCell>
+              <TableCell>Participant Name</TableCell>
               <TableCell>Start Date</TableCell>
               <TableCell>End Date</TableCell>
               <TableCell>Registration Time</TableCell>
@@ -358,9 +384,8 @@ const AdminParticipantManage = () => {
             {participants.map((participant) => (
               <TableRow key={participant.id}>
                 <TableCell>{participant.id}</TableCell>
-                <TableCell>{participant.student_code}</TableCell>
-                <TableCell>{participant.activity_name}</TableCell>
-                <TableCell>{participant.activity_category}</TableCell>
+                <TableCell>{participant.identify_code}</TableCell>
+                <TableCell>{participant.participant_name}</TableCell>
                 <TableCell>{participant.activity_venue}</TableCell>
                 <TableCell>
                   {new Date(participant.start_date).toLocaleString()}

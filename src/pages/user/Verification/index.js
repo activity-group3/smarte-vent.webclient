@@ -153,7 +153,7 @@ const Verification = () => {
               <TableRow key={participant.id}>
                 <TableCell>{participant.activity_name}</TableCell>
                 <TableCell>{participant.student_name}</TableCell>
-                <TableCell>{participant.student_code}</TableCell>
+                <TableCell>{participant.identify_code}</TableCell>
                 <TableCell>
                   {formatDate(participant.registration_time)}
                 </TableCell>

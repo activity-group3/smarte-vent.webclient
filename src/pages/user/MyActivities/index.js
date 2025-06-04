@@ -1,30 +1,43 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaClock, FaMapMarkerAlt, FaCalendarTimes, FaUsers } from "react-icons/fa";
-import "../Dashboard/dashboard.css";
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  CircularProgress,
+  Button,
+} from "@mui/material";
+import {
+  LocationOn as LocationOnIcon,
+  AccessTime as AccessTimeIcon,
+  People as PeopleIcon,
+  EventBusy as EventBusyIcon,
+  ErrorOutline as ErrorOutlineIcon,
+} from "@mui/icons-material";
 
 const MyActivities = () => {
   const navigate = useNavigate();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
   const [pagination, setPagination] = useState({
     currentPage: 1,
     totalPages: 1,
-    pageSize: 6
+    pageSize: 6,
   });
-
   const [sort, setSort] = useState({
     field: "startDate",
     direction: "desc",
   });
-
   const pageSizeOptions = [5, 10, 15, 20];
 
   useEffect(() => {
     fetchJoinedActivities(pagination.currentPage);
   }, [pagination.currentPage, pagination.pageSize, sort]);
+
+  const toSnakeCase = (str) =>
+    str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 
   const fetchJoinedActivities = async (page) => {
     try {
@@ -41,10 +54,22 @@ const MyActivities = () => {
       );
       const data = await response.json();
       if (data.status_code === 200) {
-        setActivities(data.data.results);
-        setPagination(prev => ({
+        const transformedActivities = data.data.results.map((activity) => ({
+          id: activity.id,
+          activityName: activity.activity_name,
+          description: activity.description,
+          startDate: activity.start_date,
+          endDate: activity.end_date,
+          activityVenue: activity.activity_venue,
+          activityStatus: activity.activity_status,
+          activityCategory: activity.activity_category,
+          current_participants: activity.current_participants,
+          capacity_limit: activity.capacity_limit,
+        }));
+        setActivities(transformedActivities);
+        setPagination((prev) => ({
           ...prev,
-          totalPages: data.data.total_pages
+          totalPages: data.data.total_pages,
         }));
       } else {
         setError("Failed to fetch joined activities");
@@ -57,9 +82,9 @@ const MyActivities = () => {
   };
 
   const handlePageChange = (newPage) => {
-    setPagination(prev => ({
+    setPagination((prev) => ({
       ...prev,
-      currentPage: newPage
+      currentPage: newPage,
     }));
   };
 
@@ -69,11 +94,10 @@ const MyActivities = () => {
   };
 
   const handlePageSizeChange = (event) => {
-    const newPageSize = Number(event.target.value);
     setPagination((prev) => ({
       ...prev,
-      pageSize: newPageSize,
-      currentPage: Math.min(prev.currentPage, Math.ceil(prev.totalPages * prev.pageSize / newPageSize)), // Adjust current page if necessary
+      pageSize: Number(event.target.value),
+      currentPage: 1, // Reset to page 1 when changing page size
     }));
   };
 
@@ -94,158 +118,203 @@ const MyActivities = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "WAITING_TO_START":
-        return "status-waiting";
+        return "bg-amber-100 text-amber-800 border border-amber-200";
       case "IN_PROGRESS":
-        return "status-progress";
+        return "bg-emerald-100 text-emerald-800 border border-emerald-200";
       case "COMPLETED":
-        return "status-completed";
+        return "bg-sky-100 text-sky-800 border border-sky-200";
       case "CANCELLED":
-        return "status-cancelled";
+        return "bg-rose-100 text-rose-800 border border-rose-200";
       default:
-        return "status-default";
+        return "bg-slate-100 text-slate-800 border border-slate-200";
     }
   };
 
   const getCategoryStyle = (category) => {
     switch (category) {
       case "THIRD_PARTY":
-        return "category-third-party";
+        return "bg-violet-100 text-violet-800 border border-violet-200";
       case "UNIVERSITY":
-        return "category-university";
+        return "bg-teal-100 text-teal-800 border border-teal-200";
       case "DEPARTMENT":
-        return "category-department";
+        return "bg-amber-100 text-amber-800 border border-amber-200";
       case "STUDENT_ORGANIZATION":
-        return "category-student-org";
+        return "bg-fuchsia-100 text-fuchsia-800 border border-fuchsia-200";
       default:
-        return "category-default";
+        return "bg-slate-100 text-slate-800 border border-slate-200";
     }
   };
 
   return (
-    <div className="dashboard-main">
-      <header className="dashboard-header">
-        <h1>My Joined Activities</h1>
-        <p>Activities you have joined</p>
-      </header>
-
-      <div className="dashboard-content">
-        <div className="activities-header">
-          <h2>Activities List</h2>
-          <div className="activities-controls">
-            <select
-              value={`${sort.field},${sort.direction}`}
-              onChange={handleSortChange}
-              className="sort-select"
-            >
-              <option value="startDate,desc">Latest First</option>
-              <option value="startDate,asc">Earliest First</option>
-              <option value="activityName,asc">Name A-Z</option>
-              <option value="activityName,desc">Name Z-A</option>
-            </select>
-            <select
-              value={pagination.pageSize}
-              onChange={handlePageSizeChange}
-              className="page-size-select"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size} per page
-                </option>
-              ))}
-            </select>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <header className="mb-10">
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+            My Joined Activities
+          </h1>
+          <p className="mt-2 text-lg text-slate-600">Activities you have joined</p>
+        </header>
+        <div className="bg-white rounded-xl shadow-md border border-slate-100 overflow-hidden">
+          <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-2xl font-bold text-slate-800">Activities List</h2>
+            <div className="mt-4 sm:mt-0 flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Sort By</InputLabel>
+                <Select
+                  value={`${sort.field},${sort.direction}`}
+                  onChange={handleSortChange}
+                >
+                  <MenuItem value="startDate,desc">Latest First</MenuItem>
+                  <MenuItem value="startDate,asc">Earliest First</MenuItem>
+                  <MenuItem value="activityName,asc">Name A-Z</MenuItem>
+                  <MenuItem value="activityName,desc">Name Z-A</MenuItem>
+                </Select>
+              </FormControl>
+              <FormControl sx={{ minWidth: 120 }}>
+                <InputLabel>Page Size</InputLabel>
+                <Select value={pagination.pageSize} onChange={handlePageSizeChange}>
+                  {pageSizeOptions.map((size) => (
+                    <MenuItem key={size} value={size}>
+                      {size} per page
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </div>
           </div>
-        </div>
-
-        {loading && <div className="loading">Loading activities...</div>}
-        {error && <div className="error-message">{error}</div>}
-        {!loading && !error && activities.length === 0 ? (
-          <div className="no-activities">
-            <FaCalendarTimes className="no-activities-icon" />
-            <p>You haven't joined any activities yet</p>
-          </div>
-        ) : (
-          <div className="activities-grid">
-            {activities.map((activity) => (
-              <div
-                key={activity.id}
-                className="activity-card"
-                onClick={() => handleActivityClick(activity.id)}
-                role="button"
-                tabIndex={0}
-              >
-                <div className="activity-header">
-                  <h3>{activity.activity_name}</h3>
-                </div>
-                <p className="description">{activity.description}</p>
-                <div className="activity-details">
-                  <div className="venue-info">
-                    <FaMapMarkerAlt className="detail-icon" />
-                    <span>{activity.activity_venue}</span>
-                  </div>
-                  <div className="time-info">
-                    <div className="date-group">
-                      <FaClock className="detail-icon" />
-                      <div className="date-range">
-                        <div>
-                          <strong>Start:</strong>
-                          <time>{formatDate(activity.start_date)}</time>
+          {loading && (
+            <div className="p-12 text-center">
+              <CircularProgress size={48} />
+              <p className="mt-4 text-slate-600 text-lg">Loading activities...</p>
+            </div>
+          )}
+          {error && (
+            <div className="p-12 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-rose-100 text-rose-600 mb-4">
+                <ErrorOutlineIcon fontSize="large" />
+              </div>
+              <p className="text-rose-600 text-lg font-medium">{error}</p>
+              <p className="mt-2 text-slate-500">
+                Please try again later or contact support.
+              </p>
+            </div>
+          )}
+          {!loading && !error && activities.length === 0 ? (
+            <div className="p-12 text-center">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 text-slate-400 mb-4">
+                <EventBusyIcon fontSize="large" />
+              </div>
+              <p className="text-slate-600 text-lg font-medium">
+                You haven&apos;t joined any activities yet
+              </p>
+              <p className="mt-2 text-slate-500">
+                Join some activities to see them here.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
+                {activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    onClick={() => handleActivityClick(activity.id)}
+                    className="group relative bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden hover:shadow-md hover:border-violet-200 transition-all duration-300 cursor-pointer"
+                    role="button"
+                    tabIndex={0}
+                  >
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-violet-500 to-fuchsia-500"></div>
+                    <div className="p-5">
+                      <h3 className="text-lg font-semibold text-slate-800 group-hover:text-violet-700 transition-colors duration-200 line-clamp-1">
+                        {activity.activityName}
+                      </h3>
+                      <p className="mt-2 text-slate-600 text-sm line-clamp-2">
+                        {activity.description}
+                      </p>
+                      <div className="mt-5 space-y-4">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 mt-1">
+                            <LocationOnIcon className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <span className="ml-2 text-sm text-slate-600">
+                            {activity.activityVenue}
+                          </span>
                         </div>
-                        <div>
-                          <strong>End:</strong>
-                          <time>{formatDate(activity.end_date)}</time>
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0 mt-1">
+                            <AccessTimeIcon className="h-4 w-4 text-slate-400" />
+                          </div>
+                          <div className="ml-2 text-sm text-slate-600">
+                            <div>
+                              <span className="font-medium text-slate-700">Start:</span>{" "}
+                              <time>{formatDate(activity.startDate)}</time>
+                            </div>
+                            <div className="mt-1">
+                              <span className="font-medium text-slate-700">End:</span>{" "}
+                              <time>{formatDate(activity.endDate)}</time>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-between">
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${getStatusColor(activity.activityStatus)}`}
+                            >
+                              {activity.activityStatus.replace(/_/g, " ")}
+                            </span>
+                            <span
+                              className={`px-2.5 py-1 rounded-full text-xs font-medium ${getCategoryStyle(activity.activityCategory)}`}
+                            >
+                              {activity.activityCategory.replace(/_/g, " ")}
+                            </span>
+                          </div>
+                          <div className="flex items-center text-sm text-slate-600 bg-slate-50 px-2 py-1 rounded-md">
+                            <PeopleIcon className="mr-1.5 text-slate-400" />
+                            <span className="font-medium">{activity.current_participants}</span>
+                            <span className="mx-1">/</span>
+                            <span>{activity.capacity_limit}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                  <div className="activity-meta">
-                    <div className="meta-group">
-                      <span className={`status-badge ${getStatusColor(activity.activity_status)}`}>
-                        {activity.activity_status.replace(/_/g, " ")}
-                      </span>
-                      <span className={`category-tag ${getCategoryStyle(activity.activity_category)}`}>
-                        {activity.activity_category.replace(/_/g, " ")}
-                      </span>
-                    </div>
-                    <div className="capacity-badge">
-                      <FaUsers className="capacity-icon" />
-                      {activity.capacity}/{activity.capacity_limit}
-                    </div>
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        )}
-        {activities.length > 0 && (
-          <div className="pagination">
-            <button
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
-              className="pagination-btn"
-            >
-              Previous
-            </button>
-            {[...Array(pagination.totalPages)].map((_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`pagination-btn ${
-                  pagination.currentPage === index + 1 ? "active" : ""
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}
-              className="pagination-btn"
-            >
-              Next
-            </button>
-          </div>
-        )}
-      </div>
+              {activities.length > 0 && (
+                <div className="flex items-center justify-center p-6 border-t border-slate-100">
+                  <Button
+                    onClick={() => handlePageChange(pagination.currentPage - 1)}
+                    disabled={pagination.currentPage === 1}
+                    variant="outlined"
+                    sx={{ mx: 0.5 }}
+                  >
+                    Previous
+                  </Button>
+                  {[...Array(pagination.totalPages)].map((_, index) => (
+                    <Button
+                      key={index + 1}
+                      onClick={() => handlePageChange(index + 1)}
+                      variant={
+                        pagination.currentPage === index + 1 ? "contained" : "outlined"
+                      }
+                      sx={{ mx: 0.5 }}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                  <Button
+                    onClick={() => handlePageChange(pagination.currentPage + 1)}
+                    disabled={pagination.currentPage === pagination.totalPages}
+                    variant="outlined"
+                    sx={{ mx: 0.5 }}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

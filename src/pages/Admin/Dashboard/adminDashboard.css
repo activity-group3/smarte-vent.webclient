@@ -1,121 +1,158 @@
-.dashboard {
-  display: flex;
+/* Admin Dashboard Styles */
+
+/* Main Layout */
+.admin-dashboard {
   min-height: 100vh;
-}
-
-.sidebar {
-  width: 250px;
-  background-color: #2c3e50;
-  color: white;
-  padding: 2rem;
-}
-
-.sidebar-header {
-  text-align: center;
-  margin-bottom: 2rem;
-}
-
-.avatar {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.sidebar-nav a, .logout-btn {
-  color: white;
-  text-decoration: none;
-  padding: 0.75rem;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.sidebar-nav a:hover, .logout-btn:hover {
-  background-color: #34495e;
-}
-
-.sidebar-nav .active {
-  background-color: #34495e;
-  font-weight: 500;
-}
-
-.logout-btn {
-  margin-top: auto;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: #e74c3c;
-}
-
-.user-info {
-  margin-top: 1rem;
-}
-
-.user-info h3 {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin-bottom: 0.3rem;
-  color: white;
-}
-
-.student-code {
-  font-size: 0.9rem;
-  color: #b3bac5;
-}
-
-.dashboard-main {
-  flex: 1;
-  padding: 2rem;
   background-color: #f8f9fa;
+  color: #333;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
 }
 
+/* Dashboard Header */
 .dashboard-header {
   margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.dashboard-header h1 {
+.dashboard-header h4 {
   color: #2c3e50;
+  font-weight: 700;
   margin-bottom: 0.5rem;
 }
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
+.dashboard-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
-.stat-card {
-  background-color: white;
-  padding: 1.5rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.filter-button:hover,
+.refresh-button:hover {
+  transform: translateY(-2px);
+  transition: transform 0.2s ease;
 }
 
-.stat-card h3 {
-  color: #6c757d;
-  font-size: 0.9rem;
-  margin-bottom: 0.5rem;
-}
-
-.stat-number {
-  color: #2c3e50;
-  font-size: 2rem;
-  font-weight: bold;
-}
-
-.activities-section {
-  margin-top: 2rem;
-}
-
-.activities-section h2 {
-  color: #2c3e50;
+/* Error Alert */
+.error-alert {
+  background-color: #ffebee;
+  border-left: 4px solid #f44336;
   margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: 4px;
+}
+
+/* Filter Panel */
+.filter-panel {
+  margin-bottom: 1.5rem;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.filter-panel:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.filter-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.apply-button,
+.reset-button {
+  transition: all 0.2s ease;
+}
+
+.apply-button:hover,
+.reset-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Time Period Tabs */
+.time-period-tabs {
+  margin-bottom: 1.5rem;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.3s ease;
+}
+
+.time-period-tabs:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Loading State */
+.loading-container {
+  padding: 3rem 0;
+  text-align: center;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+/* Key Metrics Section */
+.key-metrics-section {
+  margin-bottom: 2rem;
+}
+
+.metric-card {
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.metric-card:hover {
+  transform: translateY(-5px);
+}
+
+.activities-card {
+  background: linear-gradient(135deg, #1a73e8, #4285f4);
+}
+
+.participants-card {
+  background: linear-gradient(135deg, #0f9d58, #34a853);
+}
+
+.rating-card {
+  background: linear-gradient(135deg, #9c27b0, #ab47bc);
+}
+
+.keywords-card {
+  background: linear-gradient(135deg, #f57c00, #fb8c00);
+}
+
+/* Data Visualization Section */
+.data-visualization-section {
+  margin-bottom: 2rem;
+}
+
+.chart-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  padding: 1.5rem;
+  height: 100%;
+}
+
+.chart-container:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.chart-title {
+  color: #2c3e50;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  padding-bottom: 0.75rem;
+}
+
+.chart-wrapper {
+  height: 350px;
 }
 
 .activities-grid {

@@ -17,12 +17,12 @@ const CreateAccount = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState({  
     full_name: "",
     email: "",
     password: "",
     phone: "",
-    student_code: "",
+    identify_code: "",
     role: "STUDENT",
     is_active: true,
   });
@@ -138,8 +138,8 @@ const CreateAccount = () => {
           <TextField
             fullWidth
             label="Student Code"
-            name="student_code"
-            value={formData.student_code}
+            name="identify_code"
+            value={formData.identify_code}
             onChange={handleChange}
           />
 

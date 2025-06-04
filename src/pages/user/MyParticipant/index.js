@@ -1,35 +1,45 @@
 import React, { useEffect, useState } from "react";
-import { FaClock, FaMapMarkerAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import "../Dashboard/dashboard.css";
+import {
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  TextField,
+  Button,
+  CircularProgress,
+  Box,
+  Pagination,
+} from "@mui/material";
+import {
+  AccessTime as AccessTimeIcon,
+  LocationOn as LocationOnIcon,
+  Event as EventIcon,
+  ErrorOutline as ErrorOutlineIcon,
+  EventBusy as EventBusyIcon,
+  FaMapMarkerAlt,
+  FaClock,
+  FaUsers,
+  FaCalendarTimes,
+} from "@mui/icons-material";
 
 const MyParticipant = () => {
   const [participants, setParticipants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [verifyDialog, setVerifyDialog] = useState({
-    open: false,
-    activityId: null,
-    studentCode: "",
-    participantRole: "PARTICIPANT"
-  });
+
   const [filters, setFilters] = useState({
     page: 1,
-    size: 1,
-    participationRole: "PARTICIPANT",
-    participationStatus: "",
+    size: 6, // Default page size set to 5 for practicality
+    participantRole: "PARTICIPANT",
+    participantStatus: "",
     registeredBefore: "",
-    registeredAfter: "",
     sort: "registeredAt,desc",
+    registeredAfter: "",
   });
 
-  const [pagination, setPagination] = useState({
-    currentPage: 1,
-    totalPages: 1,
-  });
-
-  const pageSizeOptions = [5, 10, 15, 20]; // Define page size options
-
+  const [totalPages, setTotalPages] = useState(1);
+  const pageSizeOptions = [5, 10, 15, 20];
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -37,12 +47,12 @@ const MyParticipant = () => {
   }, [filters]);
 
   const fetchParticipants = async () => {
+
     setLoading(true);
     setError(null);
+
     try {
       const token = localStorage.getItem("access_token");
-
-      // Convert datetime to ISO-8601 format
       const queryParams = new URLSearchParams({
         ...filters,
         registeredAfter: filters.registeredAfter
@@ -52,7 +62,6 @@ const MyParticipant = () => {
           ? new Date(filters.registeredBefore).toISOString()
           : "",
       }).toString();
-
       const response = await fetch(
         `http://localhost:8080/participants?${queryParams}`,
         {
@@ -79,10 +88,7 @@ const MyParticipant = () => {
           activity_id: item.activity_id,
         }));
         setParticipants(transformedResults);
-        setPagination((prev) => ({
-          ...prev,
-          totalPages: data.data.total_pages,
-        }));
+        setTotalPages(data.data.total_pages);
       } else {
         setError(data.message || "Failed to fetch participants");
       }
@@ -98,23 +104,13 @@ const MyParticipant = () => {
     setFilters((prev) => ({ ...prev, [name]: value, page: 1 }));
   };
 
-  const handlePageChange = (newPage) => {
+  const handlePageChange = (event, newPage) => {
     setFilters((prev) => ({ ...prev, page: newPage }));
   };
 
   const handlePageSizeChange = (e) => {
     const newSize = Number(e.target.value);
-    setFilters((prev) => ({
-      ...prev,
-      size: newSize,
-      page: 1,
-    }));
-    // Preserve pagination visibility by keeping totalPages
-    setPagination((prev) => ({
-      ...prev,
-      currentPage: 1,
-      totalPages: Math.max(1, Math.ceil((prev.totalPages * prev.size) / newSize)),
-    }));
+    setFilters((prev) => ({ ...prev, size: newSize, page: 1 }));
   };
 
   const formatDate = (dateString) => {
@@ -132,17 +128,9 @@ const MyParticipant = () => {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-
-    // Format relative time
-    if (diffDays === 0) {
-      return "Registered today";
-    } else if (diffDays === 1) {
-      return "Registered yesterday";
-    } else if (diffDays < 7) {
-      return `Registered ${diffDays} days ago`;
-    }
-
-    // Return full date for older registrations
+    if (diffDays === 0) return "Registered today";
+    if (diffDays === 1) return "Registered yesterday";
+    if (diffDays < 7) return `Registered ${diffDays} days ago`;
     return `Registered on ${new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
@@ -155,15 +143,52 @@ const MyParticipant = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case "WAITING_TO_START":
-        return "status-waiting";
+        return "bg-amber-100 text-amber-800";
       case "IN_PROGRESS":
-        return "status-progress";
+        return "bg-emerald-100 text-emerald-800";
       case "COMPLETED":
-        return "status-completed";
+        return "bg-sky-100 text-sky-800";
       case "CANCELLED":
-        return "status-cancelled";
+        return "bg-rose-100 text-rose-800";
       default:
-        return "status-default";
+        return "bg-slate-100 text-slate-800";
+    }
+  };
+
+  const getParticipationStatusColor = (status) => {
+    switch (status) {
+      case "VERIFIED":
+        return "bg-green-100 text-green-800";
+      case "UNVERIFIED":
+        return "bg-yellow-100 text-yellow-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getRoleColor = (role) => {
+    switch (role) {
+      case "PARTICIPANT":
+        return "bg-blue-100 text-blue-800";
+      case "CONTRIBUTOR":
+        return "bg-purple-100 text-purple-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const getCategoryStyle = (category) => {
+    switch (category) {
+      case "THIRD_PARTY":
+        return "bg-purple-100 text-purple-800";
+      case "UNIVERSITY":
+        return "bg-cyan-100 text-cyan-800";
+      case "DEPARTMENT":
+        return "bg-emerald-100 text-emerald-800";
+      case "STUDENT_ORGANIZATION":
+        return "bg-pink-100 text-pink-800";
+      default:
+        return "bg-gray-100 text-gray-800";
     }
   };
 
@@ -172,187 +197,273 @@ const MyParticipant = () => {
   };
 
   return (
-    <main className="dashboard-main">
-      <header className="dashboard-header">
-        <h1>My Participant</h1>
-        <p>View and manage your participation in activities</p>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <header className="mb-10">
+          <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+            My Participant
+          </h1>
+          <p className="mt-2 text-lg text-slate-600">
+            View and manage your participation in activities
+          </p>
+        </header>
 
-      <div className="dashboard-content">
-        <div className="activities-header">
-          <h2>Participants List</h2>
-          <div className="activities-controls">
-            <select
-              name="sort"
-              value={filters.sort}
-              onChange={handleFilterChange}
-              className="sort-select"
+        {/* Happening Activities Section */}
+        <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 mb-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold text-slate-900">
+              My Active Activities
+            </h2>
+            <Button
+              variant="outlined"
+              size="small"
+              onClick={() => navigate('/activities')}
+              className="text-primary-600 hover:bg-primary-50"
             >
-              <option value="registeredAt,desc">Latest Registration</option>
-              <option value="registeredAt,asc">Earliest Registration</option>
-              <option value="activityName,asc">Activity Name A-Z</option>
-              <option value="activityName,desc">Activity Name Z-A</option>
-            </select>
-            <select
-              name="participationRole"
-              value={filters.participationRole}
-              onChange={handleFilterChange}
-              className="sort-select"
-            >
-              <option value="PARTICIPANT">Participant</option>
-              <option value="CONTRIBUTOR">Contributor</option>
-            </select>
-            <select
-              name="participationStatus"
-              value={filters.participationStatus}
-              onChange={handleFilterChange}
-              className="sort-select"
-            >
-              <option value="">All Statuses</option>
-              <option value="VERIFIED">Verified</option>
-              <option value="UNVERIFIED">Unverified</option>
-            </select>
-            <div className="datetime-filter">
-              <label htmlFor="registeredAfter">Registered After:</label>
-              <input
-                type="datetime-local"
-                id="registeredAfter"
-                name="registeredAfter"
-                value={filters.registeredAfter}
-                onChange={handleFilterChange}
-                className="page-size-select"
-              />
-            </div>
-            <div className="datetime-filter">
-              <label htmlFor="registeredBefore">Registered Before:</label>
-              <input
-                type="datetime-local"
-                id="registeredBefore"
-                name="registeredBefore"
-                value={filters.registeredBefore}
-                onChange={handleFilterChange}
-                className="page-size-select"
-              />
-            </div>
-            <select
-              name="pageSize"
-              value={filters.size}
-              onChange={handlePageSizeChange}
-              className="page-size-select"
-            >
-              {pageSizeOptions.map((size) => (
-                <option key={size} value={size}>
-                  {size} per page
-                </option>
+              View All Activities
+            </Button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {participants
+              .filter(participant => participant.activityStatus === 'IN_PROGRESS')
+              .slice(0, 3)
+              .map((participant) => (
+                <div
+                  key={participant.id}
+                  onClick={() => handleActivityClick(participant.activity_id)}
+                  className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 cursor-pointer hover:shadow-md transition-all duration-300"
+                >
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-slate-900 line-clamp-1">
+                        {participant.activityName}
+                      </h3>
+                      <div className="mt-2 flex items-center text-sm text-slate-600">
+                        <AccessTimeIcon className="h-4 w-4 mr-1" />
+                        <span>{formatRegistrationDate(participant.registrationTime)}</span>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-100 text-emerald-800">
+                      In Progress
+                    </span>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center text-sm text-slate-600">
+                      <LocationOnIcon className="h-4 w-4 mr-1" />
+                      <span className="line-clamp-1">{participant.activityVenue}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-slate-600">
+                      <EventIcon className="h-4 w-4 mr-1" />
+                      <span>Ends {formatDate(participant.endDate)}</span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between">
+                    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getParticipationStatusColor(participant.participationStatus)}`}>
+                      {participant.participationStatus.replace(/_/g, " ")}
+                    </span>
+                    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getCategoryStyle(participant.activityCategory)}`}>
+                      {participant.activityCategory.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  {participant.participationRole === "CONTRIBUTOR" && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/activities/${participant.activity_id}/participants`);
+                      }}
+                      sx={{ mt: 2, width: '100%' }}
+                    >
+                      Manage Participants
+                    </Button>
+                  )}
+                </div>
               ))}
-            </select>
+            {participants.filter(participant => participant.activityStatus === 'IN_PROGRESS').length === 0 && (
+              <div className="col-span-full text-center py-8">
+                <EventBusyIcon className="mx-auto h-12 w-12 text-slate-400" />
+                <h3 className="mt-2 text-sm font-medium text-slate-900">No active activities</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  You are not currently participating in any active activities.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
-        {loading && <div className="loading">Loading participants...</div>}
-        {error && <div className="error-message">{error}</div>}
-        {!loading && !error && participants.length === 0 ? (
-          <div className="no-activities">
-            <p>No participants found</p>
+        {/* Existing filter form */}
+        <div className="bg-white rounded-xl shadow-md border border-slate-100 p-6 mb-6">
+          <div className="flex flex-wrap gap-4">
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>Sort By</InputLabel>
+              <Select
+                name="sort"
+                value={filters.sort}
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="registeredAt,desc">Latest Registration</MenuItem>
+                <MenuItem value="registeredAt,asc">Earliest Registration</MenuItem>
+                <MenuItem value="activityName,asc">Activity Name A-Z</MenuItem>
+                <MenuItem value="activityName,desc">Activity Name Z-A</MenuItem>
+                {/* <MenuItem value="startDate,asc">Start Date (Earliest First)</MenuItem>
+                <MenuItem value="startDate,desc">Start Date (Latest First)</MenuItem> */}
+              </Select>
+            </FormControl>
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>Role</InputLabel>
+              <Select
+                name="participationRole"
+                value={filters.participationRole}
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="PARTICIPANT">Participant</MenuItem>
+                <MenuItem value="CONTRIBUTOR">Contributor</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>Status</InputLabel>
+              <Select
+                name="participationStatus"
+                value={filters.participationStatus}
+                onChange={handleFilterChange}
+              >
+                <MenuItem value="">All Statuses</MenuItem>
+                <MenuItem value="VERIFIED">Verified</MenuItem>
+                <MenuItem value="UNVERIFIED">Unverified</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Registered After"
+              type="datetime-local"
+              name="registeredAfter"
+              value={filters.registeredAfter}
+              onChange={handleFilterChange}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="Registered Before"
+              type="datetime-local"
+              name="registeredBefore"
+              value={filters.registeredBefore}
+              onChange={handleFilterChange}
+              InputLabelProps={{ shrink: true }}
+            />
+            {/* <FormControl sx={{ minWidth: 120 }}>
+              <InputLabel>Page Size</InputLabel>
+              <Select
+                name="size"
+                value={filters.size}
+                onChange={handlePageSizeChange}
+              >
+                {pageSizeOptions.map((size) => (
+                  <MenuItem key={size} value={size}>
+                    {size} per page
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl> */}
+          </div>
+        </div>
+        {loading ? (
+          <div className="p-12 text-center">
+            <CircularProgress size={48} />
+            <p className="mt-4 text-slate-600 text-lg">Loading participants...</p>
+          </div>
+        ) : error ? (
+          <div className="p-12 text-center">
+            <ErrorOutlineIcon fontSize="large" className="text-rose-600" />
+            <p className="text-rose-600 text-lg font-medium">{error}</p>
+            <p className="mt-2 text-slate-500">
+              Please try again later or contact support.
+            </p>
+          </div>
+        ) : participants.length === 0 ? (
+          <div className="p-12 text-center">
+            <EventBusyIcon fontSize="large" className="text-slate-400" />
+            <p className="text-slate-600 text-lg font-medium">
+              No participants found
+            </p>
+            <p className="mt-2 text-slate-500">
+              Try adjusting your filters or check back later.
+            </p>
           </div>
         ) : (
-          <div className="activities-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {participants.map((participant) => (
               <div
                 key={participant.id}
-                className="activity-card"
+                className="group relative bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden hover:shadow-md hover:border-violet-200 transition-all duration-300 cursor-pointer"
                 onClick={() => handleActivityClick(participant.activity_id)}
-                role="button"
-                tabIndex={0}
               >
-                <h3>{participant.activityName}</h3>
-                <div className="registration-info">
-                  <FaClock className="detail-icon" />
-                  <span>{formatRegistrationDate(participant.registrationTime)}</span>
-                </div>
-                <div className="activity-details">
-                  <div className="venue-info">
-                    <FaMapMarkerAlt className="detail-icon" />
-                    <span>{participant.activityVenue}</span>
+                <div className="p-5">
+                  <h3 className="text-lg font-semibold text-slate-800 group-hover:text-violet-700 transition-colors duration-200 line-clamp-1">
+                    {participant.activityName}
+                  </h3>
+                  <div className="mt-2 flex items-center text-sm text-slate-600">
+                    <AccessTimeIcon className="h-4 w-4 mr-1" />
+                    <span>{formatRegistrationDate(participant.registrationTime)}</span>
                   </div>
-                  <div className="time-info">
-                    <FaClock className="detail-icon" />
-                    <span>
-                      {formatDate(participant.startDate)} -{" "}
-                      {formatDate(participant.endDate)}
-                    </span>
-                  </div>
-                  <div className="activity-meta">
-                    <div className="meta-group">
-                      <span
-                        className={`status-badge ${getStatusColor(
-                          participant.activityStatus
-                        )}`}
-                      >
-                        {participant.activityStatus.replace(/_/g, " ")}
-                      </span>
-                      <span className={`status-badge ${participant.participationStatus.toLowerCase()}`}>
-                        {participant.participationStatus.replace(/_/g, " ")}
-                      </span>
-                      <span className={`status-badge role-${participant.participationRole.toLowerCase()}`}>
-                        {participant.participationRole}
-                      </span>
-                      {participant.participationRole === "CONTRIBUTOR" && (
-                        <button
-                          className="manage-btn"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent activity card click
-                            navigate(`/admin/activities/${participant.activity_id}/participants`);
-                          }}
-                        >
-                          Manage Participants
-                        </button>
-                      )}
+                  <div className="mt-4 space-y-2">
+                    <div className="flex items-center text-sm text-slate-600">
+                      <LocationOnIcon className="h-4 w-4 mr-1" />
+                      <span>{participant.activityVenue}</span>
                     </div>
-                    <span className="registration-time">
-                      {new Date(participant.registrationTime).toLocaleString("en-US", {
-                        dateStyle: "medium",
-                        timeStyle: "short",
-                      })}
+                    <div className="flex items-center text-sm text-slate-600">
+                      <EventIcon className="h-4 w-4 mr-1" />
+                      <span>
+                        {formatDate(participant.startDate)} - {formatDate(participant.endDate)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(participant.activityStatus)}`}>
+                      {participant.activityStatus.replace(/_/g, " ")}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getParticipationStatusColor(participant.participationStatus)}`}>
+                      {participant.participationStatus.replace(/_/g, " ")}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getRoleColor(participant.participationRole)}`}>
+                      {participant.participationRole}
                     </span>
                   </div>
+                  {participant.participationRole === "CONTRIBUTOR" && (
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/admin/activities/${participant.activity_id}/participants`);
+                      }}
+                      sx={{ mt: 2 }}
+                    >
+                      Manage Participants
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
-
-        {pagination.totalPages > 1 && (
-          <div className="pagination">
-            <button
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 1}
-              className="pagination-btn"
-            >
-              Previous
-            </button>
-            {[...Array(pagination.totalPages)].map((_, index) => (
-              <button
-                key={index + 1}
-                onClick={() => handlePageChange(index + 1)}
-                className={`pagination-btn ${
-                  pagination.currentPage === index + 1 ? "active" : ""
-                }`}
-              >
-                {index + 1}
-              </button>
-            ))}
-            <button
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage === pagination.totalPages}
-              className="pagination-btn"
-            >
-              Next
-            </button>
-          </div>
+        {totalPages > 1 && (
+          <Box sx={{ mt: 4, display: 'flex', justifyContent: 'center' }}>
+            <Pagination
+              count={totalPages}
+              page={filters.page}
+              onChange={handlePageChange}
+              color="primary"
+              showFirstButton
+              showLastButton
+              sx={{
+                '& .MuiPagination-ul': {
+                  flexWrap: 'nowrap',
+                },
+              }}
+            />
+          </Box>
         )}
-      </div>
-    </main>
+      </main>
+    </div>
   );
 };
 

@@ -469,3 +469,60 @@
     padding: 0.5rem;
   }
 }
+
+.filter-form {
+  background-color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  margin-bottom: 1.5rem;
+}
+
+.filter-form .MuiGrid-container {
+  gap: 0.75rem;
+}
+
+.filter-form .MuiTextField-root,
+.filter-form .MuiFormControl-root {
+  background-color: white;
+}
+
+.filter-form .MuiInputBase-root {
+  font-size: 0.875rem;
+}
+
+.filter-form .MuiInputLabel-root {
+  font-size: 0.875rem;
+}
+
+.filter-form .MuiSelect-select {
+  padding: 0.5rem;
+}
+
+.filter-form .MuiButton-root {
+  text-transform: none;
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+}
+
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.pagination-container .MuiPagination-root {
+  background-color: white;
+  padding: 0.5rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.pagination-container .MuiPaginationItem-root {
+  font-size: 0.875rem;
+}
+
+.pagination-container .Mui-selected {
+  background-color: #2c3e50 !important;
+  color: white !important;
+}
