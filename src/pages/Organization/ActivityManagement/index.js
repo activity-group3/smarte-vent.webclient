@@ -107,17 +107,48 @@ const OrganizationActivityManagement = () => {
       const token = localStorage.getItem("access_token");
       let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
 
-      if (filters.status) {
-        queryString += `&activity_status=${filters.status}`;
+      // Add filters if they exist
+      if (filters.activity_name) {
+        queryString += `&activityName=${encodeURIComponent(filters.activity_name)}`;
       }
-      if (filters.category) {
-        queryString += `&activity_category=${filters.category}`;
+      if (filters.status) {
+        queryString += `&activityStatus=${filters.status}`;
+      }
+      if (filters.activity_category) {
+        queryString += `&activityCategory=${filters.activity_category}`;
       }
       if (filters.startDateFrom) {
         queryString += `&startDateFrom=${filters.startDateFrom.toISOString()}`;
       }
       if (filters.startDateTo) {
         queryString += `&startDateTo=${filters.startDateTo.toISOString()}`;
+      }
+      if (filters.endDateFrom) {
+        queryString += `&endDateFrom=${filters.endDateFrom.toISOString()}`;
+      }
+      if (filters.endDateTo) {
+        queryString += `&endDateTo=${filters.endDateTo.toISOString()}`;
+      }
+      if (filters.min_attendance_score_unit) {
+        queryString += `&minAttendanceScoreUnit=${filters.min_attendance_score_unit}`;
+      }
+      if (filters.max_attendance_score_unit) {
+        queryString += `&maxAttendanceScoreUnit=${filters.max_attendance_score_unit}`;
+      }
+      if (filters.min_capacity_limit) {
+        queryString += `&minCapacityLimit=${filters.min_capacity_limit}`;
+      }
+      if (filters.max_capacity_limit) {
+        queryString += `&maxCapacityLimit=${filters.max_capacity_limit}`;
+      }
+      if (filters.activity_venue) {
+        queryString += `&activityVenue=${encodeURIComponent(filters.activity_venue)}`;
+      }
+      if (filters.fee) {
+        queryString += `&fee=${filters.fee}`;
+      }
+      if (filters.registration_deadline) {
+        queryString += `&registration_deadline=${filters.registration_deadline.toISOString()}`;
       }
 
       const response = await fetch(
@@ -132,30 +163,18 @@ const OrganizationActivityManagement = () => {
       );
 
       const data = await response.json();
-      // Assuming the top-level response is the actual data object as per the example
-      // If the response is { "data": { ..., "results": ... }, "status_code": 200 }
-      // then data.data.results and data.data.total_pages would be correct.
-      // If the response is { "results": ..., "total_pages": ..., "status_code": 200 }
-      // then data.results and data.total_pages would be correct.
-      // Based on the provided example, the structure is: { "data": { "results": [], "total_pages": N }, "status_code": 200 }
       if (data.status_code === 200 && data.data) {
-        setActivities(data.data.results); 
+        setActivities(data.data.results);
         setTotalPages(data.data.total_pages);
-      } else if (data.results && typeof data.total_pages !== 'undefined') {
-        // Fallback for a flatter structure if status_code is not the primary check
-        // This case assumes the response might be directly { results: [], total_pages: N }
-        // However, the provided example clearly has a nested 'data' object and a 'status_code'.
-        // The primary logic should stick to the provided example.
-        console.warn('API response structure might have changed, attempting to parse flatter structure. This is unexpected based on the example.');
-        setActivities(data.results);
-        setTotalPages(data.total_pages);
       } else {
-        console.error("Error fetching activities or unexpected response structure:", data.message || data);
+        console.error("Error fetching activities:", data.message);
         setActivities([]);
         setTotalPages(0);
       }
     } catch (error) {
       console.error("Error fetching activities:", error);
+      setActivities([]);
+      setTotalPages(0);
     }
   };
 
@@ -165,14 +184,20 @@ const OrganizationActivityManagement = () => {
 
   const handlePageChange = (event, value) => {
     setPage(value - 1);
-  };
+  }
 
   const handleFilterChange = (field) => (event) => {
+    const value = event.target.value;
     setFilters((prev) => ({
       ...prev,
-      [field]: event.target.value,
+      [field]: value,
     }));
     setPage(0);
+  };
+
+  const handleSearch = () => {
+    setPage(0);
+    fetchActivities();
   };
 
   const handleEdit = async (activityId) => {
@@ -399,15 +424,27 @@ const OrganizationActivityManagement = () => {
 
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                  <div className=" bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-lg hover:scale-[1.01] transition-all duration-300 flex-1">
+                  <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-lg hover:scale-[1.01] transition-all duration-300 flex-1">
                     <TextField
                       fullWidth
-                      label="Search Activity Name"
+                      label="Activity Name"
+                      value={filters.activity_name}
+                      onChange={handleFilterChange("activity_name")}
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          handleSearch();
+                        }
+                      }}
                       variant="outlined"
                       size="medium"
                       className="bg-white dark:bg-slate-700 rounded-lg"
                       InputProps={{
                         startAdornment: <FaSearch className="mr-2 text-gray-400" />,
+                        endAdornment: (
+                          <IconButton onClick={handleSearch} size="small">
+                            <FaSearch />
+                          </IconButton>
+                        ),
                       }}
                     />
                   </div>
@@ -425,15 +462,15 @@ const OrganizationActivityManagement = () => {
                 <Collapse in={showFilters}>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
-                      <div className=" bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
+                      <div className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
                         <FormControl
                           fullWidth
                           className="bg-white dark:bg-slate-700 rounded-lg"
                         >
                           <InputLabel>Category</InputLabel>
                           <Select
-                            value={filters.category}
-                            onChange={e => handleFilterChange(e.target.value)}
+                            value={filters.activity_category}
+                            onChange={handleFilterChange("activity_category")}
                             label="Category"
                           >
                             <MenuItem value="">All Categories</MenuItem>
@@ -448,7 +485,7 @@ const OrganizationActivityManagement = () => {
                     </Grid>
 
                     <Grid item xs={12} md={6}>
-                      <div className=" bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
+                      <div className="bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
                         <FormControl
                           fullWidth
                           className="bg-white dark:bg-slate-700 rounded-lg"
@@ -456,15 +493,15 @@ const OrganizationActivityManagement = () => {
                           <InputLabel>Status</InputLabel>
                           <Select
                             value={filters.status}
-                            onChange={(e) => handleFilterChange(e.target.value)}
+                            onChange={handleFilterChange("status")}
                             label="Status"
                           >
-                            <MenuItem value=""><em>All Statuses</em></MenuItem>
-                            <MenuItem value={ActivityStatus.PENDING}>Pending</MenuItem>
-                            <MenuItem value={ActivityStatus.PUBLISHED}>Published</MenuItem>
-                            <MenuItem value={ActivityStatus.IN_PROGRESS}>In Progress</MenuItem>
-                            <MenuItem value={ActivityStatus.COMPLETED}>Completed</MenuItem>
-                            <MenuItem value={ActivityStatus.CANCELLED}>Cancelled</MenuItem>
+                            <MenuItem value="">All Statuses</MenuItem>
+                            {Object.values(ActivityStatus).map((status) => (
+                              <MenuItem key={status} value={status}>
+                                {status.replace(/_/g, " ")}
+                              </MenuItem>
+                            ))}
                           </Select>
                         </FormControl>
                       </div>
@@ -520,11 +557,11 @@ const OrganizationActivityManagement = () => {
                       <div className="relative p-[3px] bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
                         <DateTimePicker
                           label="Start Date From"
-                          value={filters.startDateFrom}
+                          value={filters.start_date_from}
                           onChange={(date) =>
                             setFilters((prev) => ({
                               ...prev,
-                              startDateFrom: date,
+                              start_date_from: date,
                             }))
                           }
                           renderInput={(params) => (
@@ -542,11 +579,11 @@ const OrganizationActivityManagement = () => {
                       <div className="relative p-[3px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
                         <DateTimePicker
                           label="Start Date To"
-                          value={filters.startDateTo}
+                          value={filters.start_date_to}
                           onChange={(date) =>
                             setFilters((prev) => ({
                               ...prev,
-                              startDateTo: date,
+                              start_date_to: date,
                             }))
                           }
                           renderInput={(params) => (

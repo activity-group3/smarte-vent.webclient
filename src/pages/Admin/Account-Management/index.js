@@ -26,6 +26,7 @@ import {
   InputLabel,
   Snackbar,
   Alert,
+  FormHelperText,
 } from "@mui/material";
 import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
@@ -39,6 +40,7 @@ import {
   FaCheck,
   FaSignOutAlt,
   FaBell,
+  FaSearch,
 } from "react-icons/fa";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers";
@@ -92,8 +94,8 @@ const MajorType = {
 
 const SortFields = {
   ROLE: "role",
-  IS_ACTIVE: "is_active",
-  STUDENT_CODE: "student_code",
+  IS_ACTIVE: "isActive",
+  STUDENT_CODE: "studentCode",
 };
 
 const getRoleColor = (role) => {
@@ -112,13 +114,18 @@ const AdminAccountManage = () => {
   const [accounts, setAccounts] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
   const [filters, setFilters] = useState({
+    fullName: "",
+    email: "",
+    phone: "",
+    identifyCode: "",
     role: "",
+    major: "",
     isActive: "",
-    studentCode: "",
   });
   const [sorting, setSorting] = useState({
-    field: SortFields.ROLE,
+    field: "fullName",
     direction: "asc",
   });
   const [openDialog, setOpenDialog] = useState(false);
@@ -127,8 +134,8 @@ const AdminAccountManage = () => {
   const [newAccount, setNewAccount] = useState({
     username: "",
     password: "",
-    identify_code: "",
-    full_name: "",
+    identifyCode: "",
+    fullName: "",
     email: "",
     phone: "",
     major: "",
@@ -137,6 +144,7 @@ const AdminAccountManage = () => {
   const [createError, setCreateError] = useState(null);
   const [openSnackbar, setOpenSnackbar] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState("");
+  const [validationErrors, setValidationErrors] = useState({});
 
   const handleSortChange = (field) => {
     setSorting((prev) => ({
@@ -151,20 +159,27 @@ const AdminAccountManage = () => {
     try {
       const token = localStorage.getItem("access_token");
 
-      let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page,
+        size: 10,
+        order: `${sorting.field},${sorting.direction}`
+      });
 
-      if (filters.role) {
-        queryString += `&role=${filters.role}`;
-      }
-      if (filters.isActive !== "") {
-        queryString += `&is_active=${filters.isActive}`;
-      }
-      if (filters.studentCode) {
-        queryString += `&student_code=${filters.studentCode}`;
-      }
+      // Add filters if they exist
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== "" && value !== null && value !== undefined) {
+          // Convert isActive to boolean for the API
+          if (key === 'isActive' && value !== '') {
+            params.append('isActive', value === 'true');
+          } else {
+            params.append(key, value);
+          }
+        }
+      });
 
       const response = await fetch(
-        `http://localhost:8080/accounts?${queryString}`,
+        `http://localhost:8080/accounts?${params.toString()}`,
         {
           method: "GET",
           headers: {
@@ -179,10 +194,16 @@ const AdminAccountManage = () => {
       }
 
       const data = await response.json();
-      setAccounts(data.data.results);
-      setTotalPages(data.data.total_pages);
+      if (data.status_code === 200) {
+        setAccounts(data.data.results);
+        setTotalPages(data.data.total_pages);
+        setTotalElements(data.data.total_elements);
+      } else {
+        throw new Error(data.message || "Failed to fetch accounts");
+      }
     } catch (error) {
       console.error("Error fetching accounts:", error);
+      // You might want to show an error message to the user here
     }
   };
 
@@ -194,12 +215,33 @@ const AdminAccountManage = () => {
     setPage(value - 1);
   };
 
+  const handleSort = (field) => {
+    setSorting(prev => ({
+      field,
+      direction: prev.field === field && prev.direction === 'asc' ? 'desc' : ''
+    }));
+    setPage(0);
+  };
+
   const handleFilterChange = (field) => (event) => {
+    const value = event.target.value;
+    setFilters((prev) => ({
+      ...prev,
+      [field]: field === 'is_active' ? (value === 'true' ? true : value === 'false' ? false : '') : value,
+    }));
+    setPage(0);
+  };
+
+  const handleSearchInput = (field) => (event) => {
     setFilters((prev) => ({
       ...prev,
       [field]: event.target.value,
     }));
+  };
+
+  const handleSearch = () => {
     setPage(0);
+    fetchAccounts();
   };
 
   const handleStatusChange = async (accountId, currentStatus) => {
@@ -213,6 +255,9 @@ const AdminAccountManage = () => {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            is_active: !currentStatus
+          }),
         }
       );
 
@@ -263,34 +308,89 @@ const AdminAccountManage = () => {
     }
   };
 
+  const validateFields = (data) => {
+    const errors = {};
+    
+    // Full Name validation
+    if (!data.full_name) {
+      errors.full_name = "Full name is required";
+    } else if (data.full_name.length > 100) {
+      errors.full_name = "Full name must be less than 100 characters";
+    }
+
+    // Email validation
+    if (!data.email) {
+      errors.email = "Email is required";
+    } else if (data.email.length > 100) {
+      errors.email = "Email must be less than 100 characters";
+    } else if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i.test(data.email)) {
+      errors.email = "Email should be valid";
+    }
+
+    // Phone validation
+    if (!data.phone) {
+      errors.phone = "Phone number is required";
+    } else if (!/^[0-9]{10,15}$/.test(data.phone)) {
+      errors.phone = "Phone number must be 10-15 digits";
+    }
+
+    // Major validation
+    if (!data.major) {
+      errors.major = "Major is required";
+    }
+
+    // Role validation
+    if (!data.role) {
+      errors.role = "Role is required";
+    }
+
+    return errors;
+  };
+
   const handleCreateAccount = async () => {
     try {
       setCreateError(null);
+      setValidationErrors({});
+
+      const accountData = {
+        username: newAccount.username,
+        password: newAccount.password,
+        identify_code: newAccount.identifyCode,
+        full_name: newAccount.fullName,
+        email: newAccount.email,
+        phone: newAccount.phone,
+        major: newAccount.major,
+        role: newAccount.role,
+      };
+
+      const errors = validateFields(accountData);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
       const token = localStorage.getItem("access_token");
-      const response = await fetch("http://localhost:8080/accounts/create", {
+      const response = await fetch("http://localhost:8080/admin/accounts/create", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newAccount),
+        body: JSON.stringify(accountData),
       });
 
       const data = await response.json();
-      
+
       if (data.status_code === 201) {
-        // Add the new account to the list
-        setAccounts([...accounts, data.data]);
+        setAccounts([...accounts]);
         setOpenCreateDialog(false);
-        // Show success message
         setSnackbarMessage("Account created successfully!");
         setOpenSnackbar(true);
-        // Reset form
         setNewAccount({
           username: "",
           password: "",
-          identify_code: "",
-          full_name: "",
+          identifyCode: "",
+          fullName: "",
           email: "",
           phone: "",
           major: "",
@@ -317,6 +417,61 @@ const AdminAccountManage = () => {
       return;
     }
     setOpenSnackbar(false);
+  };
+
+  const handleUpdateAccount = async () => {
+    try {
+      setValidationErrors({});
+
+      const accountData = {
+        id: selectedAccount.id,
+        username: selectedAccount.username,
+        identify_code: selectedAccount.identify_code,
+        full_name: selectedAccount.name,
+        email: selectedAccount.email,
+        phone: selectedAccount.phone,
+        major: selectedAccount.major,
+        role: selectedAccount.role,
+        is_active: selectedAccount.is_active,
+      };
+
+      const errors = validateFields(accountData);
+      if (Object.keys(errors).length > 0) {
+        setValidationErrors(errors);
+        return;
+      }
+
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `http://localhost:8080/admin/accounts/update`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(accountData),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.status_code === 200) {
+        setSnackbarMessage("Account updated successfully!");
+        setOpenSnackbar(true);
+        setOpenDialog(false);
+        fetchAccounts();
+      } else {
+        throw new Error(data.message || "Failed to update account");
+      }
+    } catch (error) {
+      console.error("Error updating account:", error);
+      setSnackbarMessage(error.message || "Failed to update account");
+      setOpenSnackbar(true);
+    }
   };
 
   return (
@@ -384,12 +539,44 @@ const AdminAccountManage = () => {
             </Box>
 
             <Box className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-lg shadow-md">
+              <StyledTextField
+                label="Full Name"
+                value={filters.fullName}
+                onChange={handleSearchInput("fullName")}
+                className="min-w-[200px]"
+                variant="outlined"
+              />
+
+              <StyledTextField
+                label="Email"
+                value={filters.email}
+                onChange={handleSearchInput("email")}
+                className="min-w-[200px]"
+                variant="outlined"
+              />
+
+              <StyledTextField
+                label="Phone"
+                value={filters.phone}
+                onChange={handleSearchInput("phone")}
+                className="min-w-[200px]"
+                variant="outlined"
+              />
+
+              <StyledTextField
+                label="Identify Code"
+                value={filters.identifyCode}
+                onChange={handleSearchInput("identifyCode")}
+                className="min-w-[200px]"
+                variant="outlined"
+              />
+
               <FormControl className="min-w-[200px]">
+                <InputLabel>Role</InputLabel>
                 <StyledSelect
                   value={filters.role}
                   onChange={handleFilterChange("role")}
-                  displayEmpty
-                  className="bg-gray-50"
+                  label="Role"
                 >
                   <MenuItem value="">All Roles</MenuItem>
                   {Object.values(AccountRole).map((role) => (
@@ -401,11 +588,27 @@ const AdminAccountManage = () => {
               </FormControl>
 
               <FormControl className="min-w-[200px]">
+                <InputLabel>Major</InputLabel>
+                <StyledSelect
+                  value={filters.major}
+                  onChange={handleFilterChange("major")}
+                  label="Major"
+                >
+                  <MenuItem value="">All Majors</MenuItem>
+                  {Object.values(MajorType).map((major) => (
+                    <MenuItem key={major} value={major}>
+                      {major}
+                    </MenuItem>
+                  ))}
+                </StyledSelect>
+              </FormControl>
+
+              <FormControl className="min-w-[200px]">
+                <InputLabel>Status</InputLabel>
                 <StyledSelect
                   value={filters.isActive}
                   onChange={handleFilterChange("isActive")}
-                  displayEmpty
-                  className="bg-gray-50"
+                  label="Status"
                 >
                   <MenuItem value="">All Status</MenuItem>
                   <MenuItem value="true">Active</MenuItem>
@@ -413,40 +616,14 @@ const AdminAccountManage = () => {
                 </StyledSelect>
               </FormControl>
 
-              <StyledTextField
-                label="Student Code"
-                value={filters.studentCode}
-                onChange={handleFilterChange("studentCode")}
-                className="min-w-[200px]"
-                variant="outlined"
-              />
-
-              <FormControl className="min-w-[200px]">
-                <StyledSelect
-                  value={sorting.field}
-                  onChange={(e) => handleSortChange(e.target.value)}
-                  displayEmpty
-                  className="bg-gray-50"
-                >
-                  <MenuItem value={SortFields.ROLE}>Sort by Role</MenuItem>
-                  <MenuItem value={SortFields.IS_ACTIVE}>
-                    Sort by Status
-                  </MenuItem>
-                  <MenuItem value={SortFields.STUDENT_CODE}>
-                    Sort by Student Code
-                  </MenuItem>
-                </StyledSelect>
-              </FormControl>
-
-              <Chip
-                label={
-                  sorting.direction === "asc" ? "↑ Ascending" : "↓ Descending"
-                }
-                color="default"
-                size="small"
-                onClick={() => handleSortChange(sorting.field)}
-                className="bg-gray-200 hover:bg-gray-300"
-              />
+              <Button
+                variant="contained"
+                onClick={handleSearch}
+                className="bg-blue-600 hover:bg-blue-700"
+                startIcon={<FaSearch />}
+              >
+                Search
+              </Button>
             </Box>
           </div>
 
@@ -490,13 +667,11 @@ const AdminAccountManage = () => {
                     <TableCell>{account.name}</TableCell>
                     <TableCell>{account.email}</TableCell>
                     <TableCell>{account.phone || "-"}</TableCell>
-                    <TableCell>{account.student_code || "-"}</TableCell>
+                    <TableCell>{account.identify_code || "-"}</TableCell>
                     <TableCell>
                       <Switch
-                        checked={account.is_active || false}
-                        onChange={() =>
-                          handleStatusChange(account.id, account.is_active)
-                        }
+                        checked={account.is_active}
+                        onChange={() => handleStatusChange(account.id, account.is_active)}
                         color="success"
                       />
                     </TableCell>
@@ -553,18 +728,43 @@ const AdminAccountManage = () => {
               Edit Account
             </DialogTitle>
             <DialogContent className="pt-4">
-              <Box>
+              <Box className="space-y-4">
                 <StyledTextField
                   fullWidth
-                  label="Name"
+                  label="Username"
+                  value={selectedAccount?.username || ""}
+                  disabled
+                  className="mb-4"
+                  variant="outlined"
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Identify Code"
+                  value={selectedAccount?.identify_code || ""}
+                  disabled
+                  className="mb-4"
+                  variant="outlined"
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Full Name"
                   value={selectedAccount?.name || ""}
+                  onChange={(e) => setSelectedAccount({...selectedAccount, name: e.target.value})}
+                  required
+                  error={!!validationErrors.fullName}
+                  helperText={validationErrors.fullName}
                   className="mb-4"
                   variant="outlined"
                 />
                 <StyledTextField
                   fullWidth
                   label="Email"
+                  type="email"
                   value={selectedAccount?.email || ""}
+                  onChange={(e) => setSelectedAccount({...selectedAccount, email: e.target.value})}
+                  required
+                  error={!!validationErrors.email}
+                  helperText={validationErrors.email}
                   className="mb-4"
                   variant="outlined"
                 />
@@ -572,9 +772,61 @@ const AdminAccountManage = () => {
                   fullWidth
                   label="Phone"
                   value={selectedAccount?.phone || ""}
+                  onChange={(e) => setSelectedAccount({...selectedAccount, phone: e.target.value})}
+                  required
+                  error={!!validationErrors.phone}
+                  helperText={validationErrors.phone}
                   className="mb-4"
                   variant="outlined"
                 />
+                <FormControl fullWidth error={!!validationErrors.major}>
+                  <InputLabel>Major</InputLabel>
+                  <StyledSelect
+                    value={selectedAccount?.major || ""}
+                    onChange={(e) => setSelectedAccount({...selectedAccount, major: e.target.value})}
+                    label="Major"
+                  >
+                    {Object.entries(MajorType).map(([key, value]) => (
+                      <MenuItem key={key} value={value}>
+                        {value}
+                      </MenuItem>
+                    ))}
+                  </StyledSelect>
+                  {validationErrors.major && (
+                    <FormHelperText>{validationErrors.major}</FormHelperText>
+                  )}
+                </FormControl>
+                <FormControl fullWidth error={!!validationErrors.role}>
+                  <InputLabel>Role</InputLabel>
+                  <StyledSelect
+                    value={selectedAccount?.role || ""}
+                    onChange={(e) => setSelectedAccount({...selectedAccount, role: e.target.value})}
+                    label="Role"
+                  >
+                    {Object.entries(AccountRole).map(([key, value]) => (
+                      <MenuItem key={key} value={value}>
+                        {value}
+                      </MenuItem>
+                    ))}
+                  </StyledSelect>
+                  {validationErrors.role && (
+                    <FormHelperText>{validationErrors.role}</FormHelperText>
+                  )}
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Status</InputLabel>
+                  <StyledSelect
+                    value={selectedAccount?.is_active ? "true" : "false"}
+                    onChange={(e) => setSelectedAccount({
+                      ...selectedAccount,
+                      is_active: e.target.value === "true"
+                    })}
+                    label="Status"
+                  >
+                    <MenuItem value="true">Active</MenuItem>
+                    <MenuItem value="false">Inactive</MenuItem>
+                  </StyledSelect>
+                </FormControl>
               </Box>
             </DialogContent>
             <DialogActions className="bg-gray-50 p-4">
@@ -586,10 +838,7 @@ const AdminAccountManage = () => {
               </StyledButton>
               <StyledButton
                 color="primary"
-                onClick={() => {
-                  // Add your save logic here
-                  setOpenDialog(false);
-                }}
+                onClick={handleUpdateAccount}
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 Save
@@ -619,6 +868,8 @@ const AdminAccountManage = () => {
                   value={newAccount.username}
                   onChange={handleNewAccountChange("username")}
                   required
+                  error={!!validationErrors.username}
+                  helperText={validationErrors.username}
                 />
                 <StyledTextField
                   fullWidth
@@ -627,20 +878,26 @@ const AdminAccountManage = () => {
                   value={newAccount.password}
                   onChange={handleNewAccountChange("password")}
                   required
+                  error={!!validationErrors.password}
+                  helperText={validationErrors.password}
                 />
                 <StyledTextField
                   fullWidth
                   label="Identify Code"
-                  value={newAccount.identify_code}
-                  onChange={handleNewAccountChange("identify_code")}
+                  value={newAccount.identifyCode}
+                  onChange={handleNewAccountChange("identifyCode")}
                   required
+                  error={!!validationErrors.identifyCode}
+                  helperText={validationErrors.identifyCode}
                 />
                 <StyledTextField
                   fullWidth
                   label="Full Name"
-                  value={newAccount.full_name}
-                  onChange={handleNewAccountChange("full_name")}
+                  value={newAccount.fullName}
+                  onChange={handleNewAccountChange("fullName")}
                   required
+                  error={!!validationErrors.fullName}
+                  helperText={validationErrors.fullName}
                 />
                 <StyledTextField
                   fullWidth
@@ -649,14 +906,19 @@ const AdminAccountManage = () => {
                   value={newAccount.email}
                   onChange={handleNewAccountChange("email")}
                   required
+                  error={!!validationErrors.email}
+                  helperText={validationErrors.email}
                 />
                 <StyledTextField
                   fullWidth
                   label="Phone"
                   value={newAccount.phone}
                   onChange={handleNewAccountChange("phone")}
+                  required
+                  error={!!validationErrors.phone}
+                  helperText={validationErrors.phone}
                 />
-                <FormControl fullWidth>
+                <FormControl fullWidth error={!!validationErrors.major}>
                   <InputLabel>Major</InputLabel>
                   <StyledSelect
                     value={newAccount.major}
@@ -669,8 +931,11 @@ const AdminAccountManage = () => {
                       </MenuItem>
                     ))}
                   </StyledSelect>
+                  {validationErrors.major && (
+                    <FormHelperText>{validationErrors.major}</FormHelperText>
+                  )}
                 </FormControl>
-                <FormControl fullWidth>
+                <FormControl fullWidth error={!!validationErrors.role}>
                   <InputLabel>Role</InputLabel>
                   <StyledSelect
                     value={newAccount.role}
@@ -683,6 +948,9 @@ const AdminAccountManage = () => {
                       </MenuItem>
                     ))}
                   </StyledSelect>
+                  {validationErrors.role && (
+                    <FormHelperText>{validationErrors.role}</FormHelperText>
+                  )}
                 </FormControl>
               </Box>
             </DialogContent>

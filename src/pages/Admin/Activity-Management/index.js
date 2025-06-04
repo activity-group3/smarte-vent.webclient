@@ -31,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import "tailwindcss/tailwind.css";
+
 import {
   FaSearch,
   FaFilter,
@@ -51,7 +52,7 @@ const ActivityStatus = {
 const ActivityCategory = {
   THIRD_PARTY: "THIRD_PARTY",
   UNIVERSITY: "UNIVERSITY",
-  DEPARTMENT: "DEPARTMENT",
+  // DEPARTMENT: "DEPARTMENT",
   STUDENT_ORGANIZATION: "STUDENT_ORGANIZATION",
 };
 
@@ -69,10 +70,20 @@ const AdminActivityManage = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
-    status: ActivityStatus.PENDING, // Default to PENDING for admin view
-    category: ActivityCategory.UNIVERSITY,
+    activity_name: "",
+    status: null, // Default to no status filter, admin can see all
+    activity_category: null, // Changed from category
     startDateFrom: null,
     startDateTo: null,
+    endDateFrom: null,
+    endDateTo: null,
+    min_attendance_score_unit: "",
+    max_attendance_score_unit: "",
+    min_capacity_limit: "",
+    max_capacity_limit: "",
+    activity_venue: "",
+    fee: "",
+    registration_deadline: null,
   });
 
   const [sorting, setSorting] = useState({
@@ -94,15 +105,20 @@ const AdminActivityManage = () => {
   };
 
   const fetchActivities = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem("access_token");
       let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
 
-      if (filters.status) {
-        queryString += `&activity_status=${filters.status}`;
+      // Add filters if they exist
+      if (filters.activity_name) {
+        queryString += `&activityName=${encodeURIComponent(filters.activity_name)}`;
       }
-      if (filters.category) {
-        queryString += `&activity_category=${filters.category}`;
+      if (filters.status) {
+        queryString += `&activityStatus=${filters.status}`;
+      }
+      if (filters.activity_category) {
+        queryString += `&activityCategory=${filters.activity_category}`;
       }
       if (filters.startDateFrom) {
         queryString += `&startDateFrom=${filters.startDateFrom.toISOString()}`;
@@ -110,6 +126,35 @@ const AdminActivityManage = () => {
       if (filters.startDateTo) {
         queryString += `&startDateTo=${filters.startDateTo.toISOString()}`;
       }
+      if (filters.endDateFrom) {
+        queryString += `&endDateFrom=${filters.endDateFrom.toISOString()}`;
+      }
+      if (filters.endDateTo) {
+        queryString += `&endDateTo=${filters.endDateTo.toISOString()}`;
+      }
+      if (filters.min_attendance_score_unit) {
+        queryString += `&minAttendanceScoreUnit=${filters.min_attendance_score_unit}`;
+      }
+      if (filters.max_attendance_score_unit) {
+        queryString += `&maxAttendanceScoreUnit=${filters.max_attendance_score_unit}`;
+      }
+      if (filters.min_capacity_limit) {
+        queryString += `&minCapacityLimit=${filters.min_capacity_limit}`;
+      }
+      if (filters.max_capacity_limit) {
+        queryString += `&maxCapacityLimit=${filters.max_capacity_limit}`;
+      }
+      if (filters.activity_venue) {
+        queryString += `&activityVenue=${encodeURIComponent(filters.activity_venue)}`;
+      }
+      if (filters.fee) {
+        queryString += `&fee=${filters.fee}`;
+      }
+      if (filters.registration_deadline) {
+        queryString += `&registrationDeadline=${filters.registration_deadline.toISOString()}`;
+      }
+
+      console.log("AdminActivityManage: Fetching activities with query:", queryString);
 
       const response = await fetch(
         `http://localhost:8080/activities/search?${queryString}`,
@@ -123,12 +168,20 @@ const AdminActivityManage = () => {
       );
 
       const data = await response.json();
-      if (data.status_code === 200) {
+      if (data.status_code === 200 && data.data) {
         setActivities(data.data.results);
         setTotalPages(data.data.total_pages);
+      } else {
+        console.error("Error fetching activities:", data.message || "Unknown error");
+        setActivities([]);
+        setTotalPages(0);
       }
     } catch (error) {
       console.error("Error fetching activities:", error);
+      setActivities([]);
+      setTotalPages(0);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -256,8 +309,8 @@ const AdminActivityManage = () => {
         return "secondary";
       case "UNIVERSITY":
         return "primary";
-      case "DEPARTMENT":
-        return "info";
+      // case "DEPARTMENT":
+      //   return "info";
       case "STUDENT_ORGANIZATION":
         return "success";
       default:
@@ -384,6 +437,8 @@ const AdminActivityManage = () => {
                       variant="outlined"
                       size="medium"
                       className="bg-white dark:bg-slate-700 rounded-lg"
+                      value={filters.activity_name}
+                      onChange={handleFilterChange("activity_name")}
                       InputProps={{
                         startAdornment: (
                           <FaSearch className="mr-2 text-gray-400" />
@@ -402,7 +457,238 @@ const AdminActivityManage = () => {
                   </Button>
                 </div>
 
-                <Collapse in={showFilters}>
+                <Collapse in={showFilters} timeout="auto" unmountOnExit className="mt-4">
+                  <Grid container spacing={3}>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <FormControl fullWidth variant="outlined" size="small" className="bg-white dark:bg-slate-700 rounded-lg">
+                        <InputLabel>Activity Status</InputLabel>
+                        <Select
+                          value={filters.status || ""}
+                          onChange={handleFilterChange("status")}
+                          label="Activity Status"
+                        >
+                          <MenuItem value="">
+                            <em>All Statuses</em>
+                          </MenuItem>
+                          {Object.values(ActivityStatus).map((status) => (
+                            <MenuItem key={status} value={status}>
+                              {status.replace(/_/g, " ")}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <FormControl fullWidth variant="outlined" size="small" className="bg-white dark:bg-slate-700 rounded-lg">
+                        <InputLabel>Activity Category</InputLabel>
+                        <Select
+                          value={filters.activity_category || ""}
+                          onChange={handleFilterChange("activity_category")}
+                          label="Activity Category"
+                        >
+                          <MenuItem value="">
+                            <em>All Categories</em>
+                          </MenuItem>
+                          {Object.values(ActivityCategory).map((category) => (
+                            <MenuItem key={category} value={category}>
+                              {category.replace(/_/g, " ")}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                    {/* Date Range Filters */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DateTimePicker
+                          label="Start Date From"
+                          value={filters.startDateFrom}
+                          onChange={(date) => {
+                            setFilters(prev => ({ ...prev, startDateFrom: date }));
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              size="small"
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </LocalizationProvider>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DateTimePicker
+                          label="Start Date To"
+                          value={filters.startDateTo}
+                          onChange={(date) => {
+                            setFilters(prev => ({ ...prev, startDateTo: date }));
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              size="small"
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </LocalizationProvider>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DateTimePicker
+                          label="End Date From"
+                          value={filters.endDateFrom}
+                          onChange={(date) => {
+                            setFilters(prev => ({ ...prev, endDateFrom: date }));
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              size="small"
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </LocalizationProvider>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DateTimePicker
+                          label="End Date To"
+                          value={filters.endDateTo}
+                          onChange={(date) => {
+                            setFilters(prev => ({ ...prev, endDateTo: date }));
+                          }}
+                          renderInput={(params) => (
+                            <TextField
+                              {...params}
+                              fullWidth
+                              size="small"
+                              className="bg-white dark:bg-slate-700 rounded-lg"
+                            />
+                          )}
+                        />
+                      </LocalizationProvider>
+                    </Grid>
+                    
+                    {/* Capacity Filters */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Min Capacity"
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={filters.min_capacity_limit}
+                        onChange={handleFilterChange("min_capacity_limit")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                        InputProps={{ inputProps: { min: 0 } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Max Capacity"
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={filters.max_capacity_limit}
+                        onChange={handleFilterChange("max_capacity_limit")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                        InputProps={{ inputProps: { min: 0 } }}
+                      />
+                    </Grid>
+
+                    {/* Attendance Score Filters */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Min Attendance Score"
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={filters.min_attendance_score_unit}
+                        onChange={handleFilterChange("min_attendance_score_unit")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                        InputProps={{ inputProps: { min: 0, max: 10, step: 0.1 } }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Max Attendance Score"
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={filters.max_attendance_score_unit}
+                        onChange={handleFilterChange("max_attendance_score_unit")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                        InputProps={{ inputProps: { min: 0, max: 10, step: 0.1 } }}
+                      />
+                    </Grid>
+
+                    {/* Venue and Fee */}
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Venue"
+                        variant="outlined"
+                        size="small"
+                        value={filters.activity_venue}
+                        onChange={handleFilterChange("activity_venue")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <TextField
+                        fullWidth
+                        label="Max Fee"
+                        type="number"
+                        variant="outlined"
+                        size="small"
+                        value={filters.fee}
+                        onChange={handleFilterChange("fee")}
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                        InputProps={{ inputProps: { min: 0 } }}
+                      />
+                    </Grid>
+
+                    {/* Clear Filters Button */}
+                    <Grid item xs={12} className="flex justify-end">
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => {
+                          setFilters({
+                            activity_name: "",
+                            status: null,
+                            activity_category: null,
+                            startDateFrom: null,
+                            startDateTo: null,
+                            endDateFrom: null,
+                            endDateTo: null,
+                            min_attendance_score_unit: "",
+                            max_attendance_score_unit: "",
+                            min_capacity_limit: "",
+                            max_capacity_limit: "",
+                            activity_venue: "",
+                            fee: "",
+                            registration_deadline: null,
+                          });
+                        }}
+                        className="mr-2"
+                      >
+                        Clear All Filters
+                      </Button>
+                    </Grid>
+                  </Grid>
+                </Collapse>
+
+                {/* <Collapse in={showFilters}>
                   <Grid container spacing={2}>
                     <Grid item xs={12} md={6}>
                       <div className=" bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
@@ -543,7 +829,7 @@ const AdminActivityManage = () => {
                       </div>
                     </Grid>
                   </Grid>
-                </Collapse>
+                </Collapse> */}
               </div>
 
               <TableContainer
