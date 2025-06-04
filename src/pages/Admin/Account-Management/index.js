@@ -22,12 +22,12 @@ import {
   DialogContent,
   DialogActions,
   Button,
-  FormHelperText,
-  InputLabel,
-  FormControlLabel,
   styled,
+  InputLabel,
+  Snackbar,
+  Alert,
 } from "@mui/material";
-import { Edit as EditIcon, Delete as DeleteIcon, Close as CloseIcon } from "@mui/icons-material";
+import { Edit as EditIcon, Delete as DeleteIcon, Add as AddIcon } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import "tailwindcss/tailwind.css";
 import {
@@ -77,22 +77,23 @@ const StyledButton = styled(Button)(({ theme }) => ({
 
 const AccountRole = {
   ADMIN: "ADMIN",
+  // LECTURER: "LECTURER",
   STUDENT: "STUDENT",
-  ORGANIZATION: "ORGANIZATION"
+  ORGANIZATION: "ORGANIZATION",
 };
 
-const MajorType = [
-  { value: "IT", label: "Information Technology" },
-  { value: "EE", label: "Electrical Engineering" },
-  { value: "IS", label: "Information Security" },
-  { value: "AE", label: "Automation Engineering" },
-  { value: "AI", label: "Artificial Intelligence" }
-];
+const MajorType = {
+  IT: "IT",
+  EE: "EE",
+  IS: "IS",
+  AE: "AE",
+  AI: "AI",
+};
 
 const SortFields = {
   ROLE: "role",
   IS_ACTIVE: "is_active",
-  IDENTIFY_CODE: "identify_code",
+  STUDENT_CODE: "student_code",
 };
 
 const getRoleColor = (role) => {
@@ -109,16 +110,12 @@ const getRoleColor = (role) => {
 const AdminAccountManage = () => {
   const navigate = useNavigate();
   const [accounts, setAccounts] = useState([]);
-  const [page, setPage] = useState(1); // Start from page 1
+  const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
-    full_name: "",
-    email: "",
-    phone: "",
-    identify_code: "",
     role: "",
-    major: "",
-    is_active: "",
+    isActive: "",
+    studentCode: "",
   });
   const [sorting, setSorting] = useState({
     field: SortFields.ROLE,
@@ -126,15 +123,20 @@ const AdminAccountManage = () => {
   });
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
-  const [formData, setFormData] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    major: '',
-    role: '',
-    is_active: true
+  const [openCreateDialog, setOpenCreateDialog] = useState(false);
+  const [newAccount, setNewAccount] = useState({
+    username: "",
+    password: "",
+    identify_code: "",
+    full_name: "",
+    email: "",
+    phone: "",
+    major: "",
+    role: "STUDENT",
   });
-  const [errors, setErrors] = useState({});
+  const [createError, setCreateError] = useState(null);
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [snackbarMessage, setSnackbarMessage] = useState("");
 
   const handleSortChange = (field) => {
     setSorting((prev) => ({
@@ -142,28 +144,24 @@ const AdminAccountManage = () => {
       direction:
         prev.field === field && prev.direction === "asc" ? "desc" : "asc",
     }));
-    setPage(1);
+    setPage(0);
   };
 
   const fetchAccounts = async () => {
     try {
       const token = localStorage.getItem("access_token");
 
-      // Build query parameters
-      const params = new URLSearchParams({
-        page: page - 1, // Convert to 0-based for the API
-        size: 20,
-        sort: `${sorting.field},${sorting.direction}`
-      });
+      let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
 
-      // Add filters if they have values
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value !== "" && value !== null && value !== undefined) {
-          params.append(key, value);
-        }
-      });
-
-      const queryString = params.toString();
+      if (filters.role) {
+        queryString += `&role=${filters.role}`;
+      }
+      if (filters.isActive !== "") {
+        queryString += `&is_active=${filters.isActive}`;
+      }
+      if (filters.studentCode) {
+        queryString += `&student_code=${filters.studentCode}`;
+      }
 
       const response = await fetch(
         `http://localhost:8080/accounts?${queryString}`,
@@ -193,7 +191,7 @@ const AdminAccountManage = () => {
   }, [page, filters, sorting]);
 
   const handlePageChange = (event, value) => {
-    setPage(value);
+    setPage(value - 1);
   };
 
   const handleFilterChange = (field) => (event) => {
@@ -201,6 +199,7 @@ const AdminAccountManage = () => {
       ...prev,
       [field]: event.target.value,
     }));
+    setPage(0);
   };
 
   const handleStatusChange = async (accountId, currentStatus) => {
@@ -235,106 +234,7 @@ const AdminAccountManage = () => {
 
   const handleEdit = (account) => {
     setSelectedAccount(account);
-    setFormData({
-      full_name: account.name || '',
-      email: account.email || '',
-      phone: account.phone || '',
-      major: account.major || '',
-      role: account.role || '',
-      is_active: account.is_active || false
-    });
-    setErrors({});
     setOpenDialog(true);
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.full_name.trim()) {
-      newErrors.full_name = 'Full name is required';
-    } else if (formData.full_name.length > 100) {
-      newErrors.full_name = 'Full name must be less than 100 characters';
-    }
-
-    if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    } else if (formData.email.length > 100) {
-      newErrors.email = 'Email must be less than 100 characters';
-    }
-
-    if (!formData.phone) {
-      newErrors.phone = 'Phone number is required';
-    } else if (!/^[0-9]{10,15}$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number must be 10-15 digits';
-    }
-
-    if (!formData.major) {
-      newErrors.major = 'Major is required';
-    }
-
-    if (!formData.role) {
-      newErrors.role = 'Role is required';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('access_token');
-      const response = await fetch(
-        `http://localhost:8080/admin/accounts/update`,
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            ...formData,
-            id: selectedAccount.id
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update account');
-      }
-
-      // Refresh accounts list
-      await fetchAccounts();
-      setOpenDialog(false);
-
-    } catch (error) {
-      console.error('Error updating account:', error);
-      // Handle error (e.g., show error message)
-    }
   };
 
   const handleRemove = async (accountId) => {
@@ -361,6 +261,62 @@ const AdminAccountManage = () => {
         console.error("Error removing account:", error);
       }
     }
+  };
+
+  const handleCreateAccount = async () => {
+    try {
+      setCreateError(null);
+      const token = localStorage.getItem("access_token");
+      const response = await fetch("http://localhost:8080/accounts/create", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newAccount),
+      });
+
+      const data = await response.json();
+      
+      if (data.status_code === 201) {
+        // Add the new account to the list
+        setAccounts([...accounts, data.data]);
+        setOpenCreateDialog(false);
+        // Show success message
+        setSnackbarMessage("Account created successfully!");
+        setOpenSnackbar(true);
+        // Reset form
+        setNewAccount({
+          username: "",
+          password: "",
+          identify_code: "",
+          full_name: "",
+          email: "",
+          phone: "",
+          major: "",
+          role: "STUDENT",
+        });
+      } else {
+        setCreateError(data.message || "Failed to create account");
+      }
+    } catch (error) {
+      setCreateError("Network error occurred");
+      console.error("Error creating account:", error);
+    }
+  };
+
+  const handleNewAccountChange = (field) => (event) => {
+    setNewAccount((prev) => ({
+      ...prev,
+      [field]: event.target.value,
+    }));
+  };
+
+  const handleCloseSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setOpenSnackbar(false);
   };
 
   return (
@@ -395,7 +351,7 @@ const AdminAccountManage = () => {
                 </div>
               </div>
               <p className="text-4xl font-bold">
-                {accounts.filter((a) => a.is_active).length}
+                {((accounts.filter((a) => a.is_active) || [])).length}
               </p>
             </div>
 
@@ -413,119 +369,76 @@ const AdminAccountManage = () => {
           </div>
 
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 mb-8">
-            <Box className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6 bg-white p-4 rounded-lg shadow-md">
-              <TextField
-                label="Full Name"
-                value={filters.full_name}
-                onChange={handleFilterChange("full_name")}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
+            <Box className="flex justify-between items-center mb-6">
+              <Typography variant="h6" className="font-semibold">
+                Account Management
+              </Typography>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={() => setOpenCreateDialog(true)}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Create Account
+              </Button>
+            </Box>
 
-              <TextField
-                label="Email"
-                value={filters.email}
-                onChange={handleFilterChange("email")}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
-
-              <TextField
-                label="Phone"
-                value={filters.phone}
-                onChange={handleFilterChange("phone")}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
-
-              <TextField
-                label="Identify Code"
-                value={filters.identify_code}
-                onChange={handleFilterChange("identify_code")}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
-
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>Role</InputLabel>
-                <Select
+            <Box className="flex flex-wrap gap-4 mb-6 bg-white p-4 rounded-lg shadow-md">
+              <FormControl className="min-w-[200px]">
+                <StyledSelect
                   value={filters.role}
                   onChange={handleFilterChange("role")}
-                  label="Role"
+                  displayEmpty
+                  className="bg-gray-50"
                 >
                   <MenuItem value="">All Roles</MenuItem>
-                  {Object.entries(AccountRole).map(([key, value]) => (
-                    <MenuItem key={key} value={value}>{value}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>Major</InputLabel>
-                <Select
-                  value={filters.major}
-                  onChange={handleFilterChange("major")}
-                  label="Major"
-                >
-                  <MenuItem value="">All Majors</MenuItem>
-                  {MajorType.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
+                  {Object.values(AccountRole).map((role) => (
+                    <MenuItem key={role} value={role}>
+                      {role}
                     </MenuItem>
                   ))}
-                </Select>
+                </StyledSelect>
               </FormControl>
 
-              <FormControl variant="outlined" size="small" fullWidth>
-                <InputLabel>Status</InputLabel>
-                <Select
-                  value={filters.is_active}
-                  onChange={handleFilterChange("is_active")}
-                  label="Status"
+              <FormControl className="min-w-[200px]">
+                <StyledSelect
+                  value={filters.isActive}
+                  onChange={handleFilterChange("isActive")}
+                  displayEmpty
+                  className="bg-gray-50"
                 >
                   <MenuItem value="">All Status</MenuItem>
                   <MenuItem value="true">Active</MenuItem>
                   <MenuItem value="false">Inactive</MenuItem>
-                </Select>
+                </StyledSelect>
               </FormControl>
 
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => fetchAccounts()}
-                className="h-[40px]"
-              >
-                Search
-              </Button>
+              <StyledTextField
+                label="Student Code"
+                value={filters.studentCode}
+                onChange={handleFilterChange("studentCode")}
+                className="min-w-[200px]"
+                variant="outlined"
+              />
 
-              <FormControl variant="outlined" size="small" className="min-w-[200px]">
-                <InputLabel>Sort By</InputLabel>
-                <Select
+              <FormControl className="min-w-[200px]">
+                <StyledSelect
                   value={sorting.field}
                   onChange={(e) => handleSortChange(e.target.value)}
-                  label="Sort By"
+                  displayEmpty
+                  className="bg-gray-50"
                 >
-                  <MenuItem value="full_name">Full Name</MenuItem>
-                  <MenuItem value="email">Email</MenuItem>
-                  <MenuItem value="role">Role</MenuItem>
-                  <MenuItem value="is_active">Status</MenuItem>
-                  <MenuItem value="identify_code">Identify Code</MenuItem>
-                </Select>
+                  <MenuItem value={SortFields.ROLE}>Sort by Role</MenuItem>
+                  <MenuItem value={SortFields.IS_ACTIVE}>
+                    Sort by Status
+                  </MenuItem>
+                  <MenuItem value={SortFields.STUDENT_CODE}>
+                    Sort by Student Code
+                  </MenuItem>
+                </StyledSelect>
               </FormControl>
 
-              <IconButton
-                onClick={() => handleSortChange(sorting.field)}
-                className="bg-gray-200 hover:bg-gray-300 border border-gray-300"
-                title={sorting.direction === 'asc' ? 'Sort ascending' : 'Sort descending'}
-              >
-                {sorting.direction === 'asc' ? '↑ Asc' : '↓ Desc'}
-              </IconButton>
-
-              {/* <Chip
+              <Chip
                 label={
                   sorting.direction === "asc" ? "↑ Ascending" : "↓ Descending"
                 }
@@ -533,7 +446,7 @@ const AdminAccountManage = () => {
                 size="small"
                 onClick={() => handleSortChange(sorting.field)}
                 className="bg-gray-200 hover:bg-gray-300"
-              /> */}
+              />
             </Box>
           </div>
 
@@ -557,7 +470,7 @@ const AdminAccountManage = () => {
                     Phone
                   </TableCell>
                   <TableCell className="font-semibold text-gray-700">
-                    Identify Code
+                    Student Code
                   </TableCell>
                   <TableCell className="font-semibold text-gray-700">
                     Status
@@ -577,7 +490,7 @@ const AdminAccountManage = () => {
                     <TableCell>{account.name}</TableCell>
                     <TableCell>{account.email}</TableCell>
                     <TableCell>{account.phone || "-"}</TableCell>
-                    <TableCell>{account.identify_code || "-"}</TableCell>
+                    <TableCell>{account.student_code || "-"}</TableCell>
                     <TableCell>
                       <Switch
                         checked={account.is_active || false}
@@ -623,132 +536,189 @@ const AdminAccountManage = () => {
           <Box className="mt-4 flex justify-center">
             <Pagination
               count={totalPages}
-              page={page}
+              page={page + 1}
               onChange={handlePageChange}
               color="primary"
-              className="mt-4 flex justify-center"
+              className="bg-white p-2 rounded-lg shadow-sm"
             />
           </Box>
 
           <Dialog
             open={openDialog}
             onClose={() => setOpenDialog(false)}
-            maxWidth="md"
+            maxWidth="sm"
             fullWidth
           >
-            <DialogTitle className="flex justify-between items-center bg-gray-50">
-              <span className="text-gray-800 font-semibold">Edit Account</span>
-              <IconButton onClick={() => setOpenDialog(false)} size="small">
-                <CloseIcon />
-              </IconButton>
+            <DialogTitle className="bg-gray-50 text-gray-800 font-semibold">
+              Edit Account
             </DialogTitle>
-            <form onSubmit={handleSubmit}>
-              <DialogContent dividers className="pt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <TextField
-                    label="Full Name *"
-                    name="full_name"
-                    value={formData.full_name}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!errors.full_name}
-                    helperText={errors.full_name}
-                  />
-
-                  <TextField
-                    label="Email *"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!errors.email}
-                    helperText={errors.email}
-                  />
-
-                  <TextField
-                    label="Phone *"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    fullWidth
-                    margin="normal"
-                    error={!!errors.phone}
-                    helperText={errors.phone || '10-15 digits'}
-                  />
-
-                  <FormControl fullWidth margin="normal" error={!!errors.major}>
-                    <InputLabel>Major *</InputLabel>
-                    <Select
-                      name="major"
-                      value={formData.major}
-                      onChange={handleInputChange}
-                      label="Major *"
-                    >
-                      {MajorType.map((option) => (
-                        <MenuItem key={option.value} value={option.value}>
-                          {option.label}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                    {errors.major && <FormHelperText>{errors.major}</FormHelperText>}
-                  </FormControl>
-
-                  <FormControl fullWidth margin="normal" error={!!errors.role}>
-                    <InputLabel>Role *</InputLabel>
-                    <Select
-                      name="role"
-                      value={formData.role}
-                      onChange={handleInputChange}
-                      label="Role *"
-                    >
-                      {Object.entries(AccountRole).map(([key, value]) => (
-                        <MenuItem key={key} value={value}>{value}</MenuItem>
-                      ))}
-                    </Select>
-                    {errors.role && <FormHelperText>{errors.role}</FormHelperText>}
-                  </FormControl>
-
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={formData.is_active}
-                        onChange={(e) =>
-                          setFormData(prev => ({
-                            ...prev,
-                            is_active: e.target.checked
-                          }))
-                        }
-                        name="is_active"
-                        color="primary"
-                      />
-                    }
-                    label={formData.is_active ? 'Active' : 'Inactive'}
-                    className="mt-6"
-                  />
-                </div>
-              </DialogContent>
-              <DialogActions className="p-4 bg-gray-50">
-                <Button
-                  onClick={() => setOpenDialog(false)}
+            <DialogContent className="pt-4">
+              <Box>
+                <StyledTextField
+                  fullWidth
+                  label="Name"
+                  value={selectedAccount?.name || ""}
+                  className="mb-4"
                   variant="outlined"
-                  color="inherit"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                >
-                  Save Changes
-                </Button>
-              </DialogActions>
-            </form>
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Email"
+                  value={selectedAccount?.email || ""}
+                  className="mb-4"
+                  variant="outlined"
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Phone"
+                  value={selectedAccount?.phone || ""}
+                  className="mb-4"
+                  variant="outlined"
+                />
+              </Box>
+            </DialogContent>
+            <DialogActions className="bg-gray-50 p-4">
+              <StyledButton
+                onClick={() => setOpenDialog(false)}
+                color="inherit"
+              >
+                Cancel
+              </StyledButton>
+              <StyledButton
+                color="primary"
+                onClick={() => {
+                  // Add your save logic here
+                  setOpenDialog(false);
+                }}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Save
+              </StyledButton>
+            </DialogActions>
+          </Dialog>
+
+          <Dialog
+            open={openCreateDialog}
+            onClose={() => setOpenCreateDialog(false)}
+            maxWidth="sm"
+            fullWidth
+          >
+            <DialogTitle className="bg-gray-50 text-gray-800 font-semibold">
+              Create New Account
+            </DialogTitle>
+            <DialogContent className="pt-4">
+              <Box className="space-y-4">
+                {createError && (
+                  <Typography color="error" className="mb-4">
+                    {createError}
+                  </Typography>
+                )}
+                <StyledTextField
+                  fullWidth
+                  label="Username"
+                  value={newAccount.username}
+                  onChange={handleNewAccountChange("username")}
+                  required
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Password"
+                  type="password"
+                  value={newAccount.password}
+                  onChange={handleNewAccountChange("password")}
+                  required
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Identify Code"
+                  value={newAccount.identify_code}
+                  onChange={handleNewAccountChange("identify_code")}
+                  required
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Full Name"
+                  value={newAccount.full_name}
+                  onChange={handleNewAccountChange("full_name")}
+                  required
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Email"
+                  type="email"
+                  value={newAccount.email}
+                  onChange={handleNewAccountChange("email")}
+                  required
+                />
+                <StyledTextField
+                  fullWidth
+                  label="Phone"
+                  value={newAccount.phone}
+                  onChange={handleNewAccountChange("phone")}
+                />
+                <FormControl fullWidth>
+                  <InputLabel>Major</InputLabel>
+                  <StyledSelect
+                    value={newAccount.major}
+                    onChange={handleNewAccountChange("major")}
+                    label="Major"
+                  >
+                    {Object.entries(MajorType).map(([key, value]) => (
+                      <MenuItem key={key} value={value}>
+                        {value}
+                      </MenuItem>
+                    ))}
+                  </StyledSelect>
+                </FormControl>
+                <FormControl fullWidth>
+                  <InputLabel>Role</InputLabel>
+                  <StyledSelect
+                    value={newAccount.role}
+                    onChange={handleNewAccountChange("role")}
+                    label="Role"
+                  >
+                    {Object.entries(AccountRole).map(([key, value]) => (
+                      <MenuItem key={key} value={value}>
+                        {value}
+                      </MenuItem>
+                    ))}
+                  </StyledSelect>
+                </FormControl>
+              </Box>
+            </DialogContent>
+            <DialogActions className="bg-gray-50 p-4">
+              <StyledButton
+                onClick={() => setOpenCreateDialog(false)}
+                color="inherit"
+              >
+                Cancel
+              </StyledButton>
+              <StyledButton
+                color="primary"
+                onClick={handleCreateAccount}
+                className="bg-blue-600 hover:bg-blue-700"
+              >
+                Create
+              </StyledButton>
+            </DialogActions>
           </Dialog>
         </Box>
+
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={6000}
+          onClose={handleCloseSnackbar}
+          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+        >
+          <Alert
+            onClose={handleCloseSnackbar}
+            severity="success"
+            variant="filled"
+            sx={{ width: '100%' }}
+          >
+            {snackbarMessage}
+          </Alert>
+        </Snackbar>
       </div>
     </LocalizationProvider>
   );

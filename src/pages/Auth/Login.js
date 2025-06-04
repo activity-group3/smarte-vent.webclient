@@ -24,11 +24,12 @@ const Login = () => {
       });
 
       const data = await response.json();
-      
+
       if (data.status_code === 200) {
         localStorage.setItem('access_token', data.data.access_token);
         localStorage.setItem('user', JSON.stringify(data.data.account));
         if (data.data.account.role === "ADMIN") navigate('/admin/dashboard');
+        else if (data.data.account.role === "ORGANIZATION") navigate('/organization/activities');
         else navigate('/dashboard');
       } else {
         setError(data.message || 'Login failed');
@@ -57,7 +58,7 @@ const Login = () => {
         <div className="particle"></div>
         <div className="particle"></div>
       </div>
-      
+
       <Paper
         elevation={6}
         className="p-8 rounded-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105 bg-white/95 backdrop-blur-sm"

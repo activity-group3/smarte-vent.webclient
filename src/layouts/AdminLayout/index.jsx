@@ -61,11 +61,11 @@ const AdminLayout = () => {
 
   const navigationItems = [
     { path: "/admin/dashboard", icon: <FaTachometerAlt />, label: "Dashboard" },
-    {
-      path: "/admin/activities/create",
-      icon: <FaPlus />,
-      label: "Create Activity",
-    },
+    // {
+    //   path: "/admin/activities/create",
+    //   icon: <FaPlus />,
+    //   label: "Create Activity",
+    // },
     { path: "/admin/accounts", icon: <FaUsers />, label: "Account Management" },
     {
       path: "/admin/activities",
