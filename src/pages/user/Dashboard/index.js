@@ -65,7 +65,7 @@ const Dashboard = () => {
   const [searchParams, setSearchParams] = useState({
     activityName: "",
     activityCategory: "",
-    status: "",
+    activityStatus: "",
     organizationName: "",
     startDateFrom: null,
     startDateTo: null,
@@ -73,8 +73,8 @@ const Dashboard = () => {
     endDateTo: null,
     minAttendanceScoreUnit: "",
     maxAttendanceScoreUnit: "",
-    minCapacity: "",
-    maxCapacity: "",
+    minCapacityLimit: "",
+    maxCapacityLimit: "",
     activityVenue: "",
   });
 
@@ -349,8 +349,8 @@ const Dashboard = () => {
                   <FormControl fullWidth size="small">
                     <InputLabel>Status</InputLabel>
                     <Select
-                      value={searchParams.status}
-                      onChange={handleSearchParamChange("status")}
+                      value={searchParams.activityStatus}
+                      onChange={handleSearchParamChange("activityStatus")}
                       label="Status"
                       displayEmpty
                     >
@@ -424,8 +424,8 @@ const Dashboard = () => {
                     label="Min Capacity"
                     type="number"
                     size="small"
-                    value={searchParams.minCapacity}
-                    onChange={handleSearchParamChange("minCapacity")}
+                    value={searchParams.minCapacityLimit}
+                    onChange={handleSearchParamChange("minCapacityLimit")}
                   />
                 </Grid>
 
@@ -435,8 +435,8 @@ const Dashboard = () => {
                     label="Max Capacity"
                     type="number"
                     size="small"
-                    value={searchParams.maxCapacity}
-                    onChange={handleSearchParamChange("maxCapacity")}
+                    value={searchParams.maxCapacityLimit}
+                    onChange={handleSearchParamChange("maxCapacityLimit")}
                   />
                 </Grid>
               </Grid>
