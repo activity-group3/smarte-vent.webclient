@@ -542,6 +542,7 @@ const ActivityUpdateForm = ({ activity, onSubmit, onCancel }) => {
                       <MenuItem value="WAITING_TO_START">Waiting to Start</MenuItem>
                       <MenuItem value="IN_PROGRESS">In Progress</MenuItem>
                       <MenuItem value="COMPLETED">Completed</MenuItem>
+                      <MenuItem value="CANCELLED">Cancelled</MenuItem>
                     </StyledSelect>
                   </FormControl>
                   <StyledTextField

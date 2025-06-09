@@ -1,33 +1,59 @@
-import React, { useEffect, useState } from "react";
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
-import {
-  FaArrowLeft,
-  FaClock,
-  FaMapMarkerAlt,
-  FaUsers,
-  FaTag,
-  FaDollarSign,
-  FaBuilding,
-} from "react-icons/fa";
+import { format } from 'date-fns';
+import { account } from "@/Context/user";
+
+// Material-UI Components
 import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogContentText,
   DialogActions,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Button,
   TextField,
   Rating,
   Box,
   Typography,
-  Alert,
   CircularProgress,
+  IconButton,
+  Snackbar,
+  Alert,
+  Tooltip,
+  Divider,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from "@mui/material";
-import { FaStar } from "react-icons/fa";
-import { account } from "@/Context/user";
+
+// Icons
+import { 
+  FaArrowLeft, 
+  FaClock, 
+  FaMapMarkerAlt, 
+  FaUsers, 
+  FaUserTie, 
+  FaCalendarAlt,  
+  FaRegClock, 
+  FaMoneyBillWave, 
+  FaRegCalendarAlt, 
+  FaRegUser, 
+  FaBuilding, 
+  FaRegBuilding, 
+  FaClipboardList, 
+  FaChevronLeft, 
+  FaChevronRight, 
+  FaQuoteLeft, 
+  FaQuoteRight, 
+  FaTag, 
+  FaDollarSign, 
+  FaMapMarkedAlt,
+  FaStar
+} from "react-icons/fa";
+
+// Lazy load the LocationMap component
+const LocationMap = lazy(() => import('@/components/LocationMap'));
 
 const ActivityDetail = () => {
   const { id } = useParams();
@@ -42,6 +68,7 @@ const ActivityDetail = () => {
   const [isParticipating, setIsParticipating] = useState(false);
   const [participationId, setParticipationId] = useState(account.id);
   const [openFeedbackDialog, setOpenFeedbackDialog] = useState(false);
+  const [participantStatus, setParticipantStatus] = useState(null);
   const [feedbackData, setFeedbackData] = useState({
     rating: 0, // 0-10 scale
     feedback_description: ''
@@ -49,6 +76,52 @@ const ActivityDetail = () => {
   const [feedbackError, setFeedbackError] = useState('');
   const [feedbackSuccess, setFeedbackSuccess] = useState('');
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
+  
+  // Format date to a readable format with options for date only
+  // const formatDate = (dateString, options = {}) => {
+  //   try {
+  //     if (options.dateOnly) {
+  //       return format(new Date(dateString), 'MMM d, yyyy');
+  //     }
+  //     return new Date(dateString).toLocaleString("en-US", {
+  //       year: "numeric",
+  //       month: "long",
+  //       day: "numeric",
+  //       hour: "2-digit",
+  //       minute: "2-digit",
+  //     });
+  //   } catch (error) {
+  //     return dateString;
+  //   }
+  // };
+
+  // Render star rating component
+  const renderStars = (rating) => {
+    const stars = [];
+    const fullStars = Math.floor(rating / 2);
+    const hasHalfStar = rating % 2 >= 1;
+    
+    for (let i = 0; i < 5; i++) {
+      if (i < fullStars) {
+        stars.push(<FaStar key={i} className="text-yellow-500" />);
+      } else if (i === fullStars && hasHalfStar) {
+        stars.push(<FaStar key={i} className="text-yellow-500 opacity-50" />);
+      } else {
+        stars.push(<FaStar key={i} className="text-gray-300" />);
+      }
+    }
+    return <div className="flex">{stars}</div>;
+  };
+
+  const [participationDetails, setParticipationDetails] = useState({
+    status: null,
+    role: null,
+    registered_at: null,
+    processed_at: null,
+    processed_by: null,
+    rejection_reason: null,
+    verified_note: null
+  });
 
   useEffect(() => {
     fetchActivityDetail();
@@ -74,6 +147,19 @@ const ActivityDetail = () => {
       if (response.ok) {
         const isJoined = data.data?.is_joined || false;
         setIsParticipating(isJoined);
+        
+        // Store all participation details
+        if (data.data) {
+          setParticipationDetails({
+            status: data.data.status,
+            role: data.data.role,
+            registered_at: data.data.registered_at,
+            processed_at: data.data.processed_at,
+            processed_by: data.data.processed_by,
+            rejection_reason: data.data.rejection_reason,
+            verified_note: data.data.verified_note
+          });
+        }
         
         // Update participation ID if available, even if is_joined is false
         if (data.data?.participation_id) {
@@ -312,14 +398,21 @@ const ActivityDetail = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  const formatDate = (dateString, options = {}) => {
+    try {
+      if (options.dateOnly) {
+        return format(new Date(dateString), 'MMM d, yyyy');
+      }
+      return new Date(dateString).toLocaleString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return dateString;
+    }
   };
 
   const formatCurrency = (fee) => {
@@ -450,20 +543,36 @@ const ActivityDetail = () => {
               )}
 
               {/* Activity Details Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-2">
-                  <FaMapMarkerAlt className="text-gray-500" />
-                  <div className="text-gray-700">
-                    <div>{activity.activity_venue}</div>
-                    <div className="text-sm">{activity.address}</div>
-                    {activity.latitude && activity.longitude && (
-                      <div className="text-xs text-gray-500">
-                        ({activity.latitude}, {activity.longitude})
-                      </div>
-                    )}
-                  </div>
+              {/* Location Section - Full Width */}
+              <div className="w-full mb-6">
+                <div className="flex items-center gap-2 mb-2">
+                  <FaMapMarkedAlt className="text-gray-500" />
+                  <span className="font-medium">Location</span>
                 </div>
+                <div className="location-details">
+                  <div className="font-medium">{activity.activity_venue}</div>
+                  <div className="text-sm location-address">{activity.address}</div>
+                  {activity.latitude && activity.longitude && (
+                    <div className="location-map-container">
+                      <Suspense fallback={
+                        <div className="h-64 w-full bg-gray-100 rounded-lg flex items-center justify-center">
+                          <CircularProgress size={24} />
+                          <span className="ml-2">Loading map...</span>
+                        </div>
+                      }>
+                        <LocationMap 
+                          latitude={activity.latitude} 
+                          longitude={activity.longitude} 
+                          address={activity.address}
+                        />
+                      </Suspense>
+                    </div>
+                  )}
+                </div>
+              </div>
 
+              {/* Other Details in 3-column Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                 <div className="flex items-center gap-2">
                   <FaUsers className="text-gray-500" />
                   <span className="text-gray-700">
@@ -492,6 +601,67 @@ const ActivityDetail = () => {
                 </div>
               </div>
 
+              {/* Participation Details Section */}
+              {isParticipating && (
+                <div className="mt-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Your Participation Details</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-700">Status:</span>
+                        <span className={`px-2 py-1 rounded-full text-sm ${
+                          participationDetails.status === 'UNVERIFIED' ? 'bg-yellow-100 text-yellow-800' :
+                          participationDetails.status === 'REJECTED' ? 'bg-red-100 text-red-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {participationDetails.status || 'N/A'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Role:</span>
+                        <span className="ml-2 text-gray-600">{participationDetails.role || 'N/A'}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-700">Registered At:</span>
+                        <span className="ml-2 text-gray-600">
+                          {participationDetails.registered_at ? 
+                            new Date(participationDetails.registered_at * 1000).toLocaleString() : 
+                            'N/A'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {participationDetails.processed_at && (
+                        <div>
+                          <span className="font-medium text-gray-700">Processed At:</span>
+                          <span className="ml-2 text-gray-600">
+                            {new Date(participationDetails.processed_at * 1000).toLocaleString()}
+                          </span>
+                        </div>
+                      )}
+                      {participationDetails.processed_by && (
+                        <div>
+                          <span className="font-medium text-gray-700">Processed By:</span>
+                          <span className="ml-2 text-gray-600">{participationDetails.processed_by}</span>
+                        </div>
+                      )}
+                      {participationDetails.rejection_reason && (
+                        <div>
+                          <span className="font-medium text-gray-700">Rejection Reason:</span>
+                          <span className="ml-2 text-red-600">{participationDetails.rejection_reason}</span>
+                        </div>
+                      )}
+                      {participationDetails.verified_note && (
+                        <div>
+                          <span className="font-medium text-gray-700">Verification Note:</span>
+                          <span className="ml-2 text-gray-600">{participationDetails.verified_note}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Join Activity / Feedback Button */}
               <div className="mt-6">
                 {joinError && (
@@ -500,15 +670,17 @@ const ActivityDetail = () => {
                 <div className="flex gap-4">
                   {isParticipating ? (
                     <div className="flex gap-4">
-                      <button
-                        className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md flex items-center"
-                        onClick={handleOpenFeedbackDialog}
-                      >
-                        <FaStar className="mr-2" />
-                        Evaluate Performance and Provide Feedback
-                      </button>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-green-100 text-green-800 text-sm font-medium">
-                        ✓ Already Joined
+                      {participationDetails.status === 'VERIFIED' && (
+                        <button
+                          className="px-6 py-2 bg-green-600 hover:bg-green-700 text-white font-medium rounded-md flex items-center"
+                          onClick={handleOpenFeedbackDialog}
+                        >
+                          <FaStar className="mr-2" />
+                          Evaluate Performance and Provide Feedback
+                        </button>
+                      )}
+                      <span className="inline-flex items-center px-3 py-1 rounded-full bg-yellow-100 text-white-800 text-sm font-medium">
+                        {participationDetails.status === 'VERIFIED' ? '✓ Already Joined' : '✓ Already Register'}
                       </span>
                     </div>
                   ) : (
@@ -579,6 +751,74 @@ const ActivityDetail = () => {
               ))}
             </div>
           </div>
+
+          {/* Feedbacks Section */}
+          {activity.feedbacks && activity.feedbacks.length > 0 && (
+            <div className="bg-white">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <div className="feedbacks-section">
+                  <div className="text-center mb-12">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-3">What Participants Say</h2>
+                    <div className="flex items-center justify-center text-gray-600">
+                      <div className="flex items-center">
+                        <FaStar className="text-yellow-400 mr-1 text-xl" />
+                        <span className="font-medium text-lg">
+                          {(activity.feedbacks.reduce((acc, curr) => acc + (curr.rating / 2), 0) / activity.feedbacks.length).toFixed(1)}
+                          <span className="mx-2 text-gray-400">•</span>
+                          {activity.feedbacks.length} {activity.feedbacks.length === 1 ? 'Review' : 'Reviews'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="feedbacks-container">
+                    {activity.feedbacks.map((feedback) => (
+                      <div key={feedback.id} className="feedback-card hover:shadow-md transition-shadow duration-200">
+                        <div className="feedback-header flex justify-between items-start mb-4">
+                          <div>
+                            <div className="text-sm text-gray-500 mb-1">
+                              {formatDate(feedback.created_date, { dateOnly: true })}
+                            </div>
+                            <h3 className="font-medium text-lg text-gray-800">
+                              {feedback.student_name}
+                            </h3>
+                          </div>
+                          <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-full">
+                            <span className="text-yellow-500 font-bold">
+                              {(feedback.rating / 2).toFixed(1)}
+                            </span>
+                            {renderStars(feedback.rating)}
+                          </div>
+                        </div>
+                        
+                        <div className="text-gray-700 relative pl-6 mb-4">
+                          <FaQuoteLeft className="text-gray-200 text-3xl absolute -top-2 left-0" />
+                          <p className="text-gray-700 leading-relaxed">"{feedback.feedback_description}"</p>
+                        </div>
+                        
+                        {feedback.organization_response && (
+                          <div className="mt-4 p-4 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                            <div className="flex items-center text-sm font-medium text-blue-800 mb-2">
+                              <FaBuilding className="mr-2" />
+                              <span>Response from {activity.organization.organization_name}</span>
+                            </div>
+                            <div className="text-gray-700 pl-6 border-l-2 border-blue-200 ml-1">
+                              <p className="text-gray-700">{feedback.organization_response}</p>
+                              {feedback.responded_at && (
+                                <div className="mt-2 text-xs text-blue-600">
+                                  {formatDate(feedback.responded_at, { dateOnly: true })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <Dialog open={openJoinDialog} onClose={handleCloseJoinDialog}>

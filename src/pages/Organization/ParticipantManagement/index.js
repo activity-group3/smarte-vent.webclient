@@ -22,9 +22,28 @@ import {
   Alert,
   Grid,
   IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Rating,
 } from "@mui/material";
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import InfoIcon from '@mui/icons-material/Info';
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import StarIcon from '@mui/icons-material/Star';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default marker icon
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: require('leaflet/dist/images/marker-icon-2x.png'),
+  iconUrl: require('leaflet/dist/images/marker-icon.png'),
+  shadowUrl: require('leaflet/dist/images/marker-shadow.png'),
+});
 
 const ParticipationStatus = {
   UNVERIFIED: "UNVERIFIED",
@@ -86,6 +105,23 @@ const OrganizationParticipantManagement = () => {
     field: SortFields.REGISTRATION_TIME,
     direction: "desc",
   });
+  const [verificationModal, setVerificationModal] = useState({
+    open: false,
+    participantId: null,
+    status: null,
+    rejection_reason: "",
+    verified_note: "",
+  });
+  const [detailLogModal, setDetailLogModal] = useState({
+    open: false,
+    participant: null,
+    loading: false,
+    error: null,
+  });
+  const [activityDetails, setActivityDetails] = useState(null);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const handleSortChange = (newField) => {
     // If the field changes, default to 'asc' or keep current direction if preferred
@@ -156,8 +192,53 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
+  const fetchActivityDetails = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(`http://localhost:8080/activities/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch activity details');
+      }
+
+      const data = await response.json();
+      setActivityDetails(data.data);
+    } catch (error) {
+      console.error('Error fetching activity details:', error);
+      setError('Failed to load activity details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchFeedbacks = async () => {
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(`http://localhost:8080/activities/${id}/feedbacks`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch feedbacks');
+      }
+
+      const data = await response.json();
+      setFeedbacks(data.data);
+    } catch (error) {
+      console.error('Error fetching feedbacks:', error);
+    }
+  };
+
   useEffect(() => {
     fetchParticipants();
+    fetchActivityDetails();
+    fetchFeedbacks();
     console.log(participants);
   }, [id, page, filters, sorting]);
 
@@ -173,17 +254,45 @@ const OrganizationParticipantManagement = () => {
     setPage(0);
   };
 
-  const handleVerify = async (participantId) => {
+  const handleOpenVerificationModal = (participantId, status) => {
+    setVerificationModal({
+      open: true,
+      participantId,
+      status,
+      rejection_reason: "",
+      verified_note: "",
+    });
+  };
+
+  const handleCloseVerificationModal = () => {
+    setVerificationModal({
+      open: false,
+      participantId: null,
+      status: null,
+      rejection_reason: "",
+      verified_note: "",
+    });
+  };
+
+  const handleVerificationSubmit = async () => {
     try {
       const token = localStorage.getItem("access_token");
+      const { participantId, status, rejection_reason, verified_note } = verificationModal;
+
       const response = await fetch(
-        `http://localhost:8080/participants/${participantId}/verify`,
+        `http://localhost:8080/participants/verify`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            participation_id: participantId,
+            status: status,
+            rejection_reason: status === "REJECTED" ? rejection_reason : null,
+            verified_note: status === "VERIFIED" ? verified_note : null,
+          }),
         }
       );
 
@@ -195,12 +304,14 @@ const OrganizationParticipantManagement = () => {
       setParticipants(
         participants.map((participant) =>
           participant.id === participantId
-            ? { ...participant, participation_status: "VERIFIED" }
+            ? { ...participant, participation_status: status }
             : participant
         )
       );
+
+      handleCloseVerificationModal();
     } catch (error) {
-      console.error("Error verifying participant:", error);
+      console.error("Error updating participant status:", error);
     }
   };
 
@@ -208,7 +319,7 @@ const OrganizationParticipantManagement = () => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
-        `http://localhost:8080/participants/${participantId}/delete`,
+        `http://localhost:8080/participant/delete`,
         {
           method: "POST",
           headers: {
@@ -229,64 +340,219 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  // Add this action button cell component
+  const handleOpenDetailLog = async (participantId) => {
+    setDetailLogModal(prev => ({ ...prev, open: true, loading: true, error: null }));
+    try {
+      const token = localStorage.getItem("access_token");
+      const response = await fetch(
+        `http://localhost:8080/participants/${participantId}`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const responseData = await response.json();
+      
+      if (responseData.status_code !== 200) {
+        throw new Error('Failed to fetch participant details');
+      }
+
+      setDetailLogModal(prev => ({
+        ...prev,
+        participant: responseData.data,
+        loading: false,
+      }));
+    } catch (error) {
+      console.error("Error fetching participant details:", error);
+      setDetailLogModal(prev => ({
+        ...prev,
+        error: "Failed to load participant details",
+        loading: false,
+      }));
+    }
+  };
+
+  const handleCloseDetailLog = () => {
+    setDetailLogModal({
+      open: false,
+      participant: null,
+      loading: false,
+      error: null,
+    });
+  };
+
+  // Update the ActionButtons component
   const ActionButtons = ({ participant, onVerify, onRemove }) => {
+    const buttons = [];
+    
+    // Add Detail Log button for all statuses
+    buttons.push(
+      <Button
+        key="detail"
+        variant="outlined"
+        color="info"
+        size="small"
+        sx={{ mr: 1 }}
+        onClick={() => handleOpenDetailLog(participant.id)}
+        startIcon={<InfoIcon />}
+      >
+        Detail Log
+      </Button>
+    );
+
+    // Add status-specific buttons
     switch (participant.participation_status) {
       case "UNVERIFIED":
-        return (
+        buttons.push(
           <>
             <Button
+              key="verify"
               variant="contained"
               color="primary"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => onVerify(participant.id)}
+              onClick={() => handleOpenVerificationModal(participant.id, "VERIFIED")}
             >
               Verify
             </Button>
             <Button
+              key="reject"
               variant="contained"
               color="error"
-              size="small"
-              onClick={() => onRemove(participant.id)}
-            >
-              Remove
-            </Button>
-          </>
-        );
-      case "VERIFIED":
-        return (
-          <>
-            <Chip
-              label="Verified"
-              color="success"
               size="small"
               sx={{ mr: 1 }}
-            />
-            <Button
-              variant="contained"
-              color="error"
-              size="small"
-              onClick={() => onRemove(participant.id)}
+              onClick={() => handleOpenVerificationModal(participant.id, "REJECTED")}
             >
-              Remove
+              Reject
             </Button>
           </>
         );
-      case "REJECTED":
-        return (
-          <Button
-            variant="contained"
-            color="error"
-            size="small"
-            onClick={() => onRemove(participant.id)}
-          >
-            Remove
-          </Button>
+        break;
+      case "VERIFIED":
+        buttons.push(
+          <>
+            <Button
+              key="unverify"
+              variant="contained"
+              color="warning"
+              size="small"
+              sx={{ mr: 1 }}
+              onClick={() => handleOpenVerificationModal(participant.id, "UNVERIFIED")}
+            >
+              Unverify
+            </Button>
+            <Button
+              key="reject"
+              variant="contained"
+              color="error"
+              size="small"
+              sx={{ mr: 1 }}
+              onClick={() => handleOpenVerificationModal(participant.id, "REJECTED")}
+            >
+              Reject
+            </Button>
+          </>
         );
-      default:
-        return null;
+        break;
+      case "REJECTED":
+        buttons.push(
+          <>
+            <Button
+              key="verify"
+              variant="contained"
+              color="primary"
+              size="small"
+              sx={{ mr: 1 }}
+              onClick={() => handleOpenVerificationModal(participant.id, "VERIFIED")}
+            >
+              Verify
+            </Button>
+            <Button
+              key="unverify"
+              variant="contained"
+              color="warning"
+              size="small"
+              sx={{ mr: 1 }}
+              onClick={() => handleOpenVerificationModal(participant.id, "UNVERIFIED")}
+            >
+              Unverify
+            </Button>
+          </>
+        );
+        break;
     }
+
+    // Add Remove button for all statuses
+    buttons.push(
+      <Button
+        key="remove"
+        variant="contained"
+        color="error"
+        size="small"
+        onClick={() => onRemove(participant.id)}
+      >
+        Remove
+      </Button>
+    );
+
+    return <>{buttons}</>;
+  };
+
+  // Update the Dialog title and content based on the action
+  const getDialogTitle = (status) => {
+    switch (status) {
+      case "VERIFIED":
+        return "Verify Participant";
+      case "REJECTED":
+        return "Reject Participant";
+      case "UNVERIFIED":
+        return "Unverify Participant";
+      default:
+        return "Update Participant Status";
+    }
+  };
+
+  const getDialogLabel = (status) => {
+    switch (status) {
+      case "VERIFIED":
+        return "Verification Note";
+      case "REJECTED":
+        return "Rejection Reason";
+      case "UNVERIFIED":
+        return "Unverification Reason";
+      default:
+        return "Note";
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleString();
+  };
+
+  // Add renderStars function
+  const renderStars = (rating) => {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+        <Rating
+          value={rating}
+          readOnly
+          precision={0.5}
+          icon={<StarIcon fontSize="inherit" />}
+          emptyIcon={<StarIcon fontSize="inherit" />}
+        />
+        <Typography variant="body2" color="text.secondary">
+          ({rating.toFixed(1)})
+        </Typography>
+      </Box>
+    );
   };
 
   return (
@@ -445,7 +711,7 @@ const OrganizationParticipantManagement = () => {
                 <TableCell>
                   <ActionButtons
                     participant={participant}
-                    onVerify={handleVerify}
+                    onVerify={handleOpenVerificationModal}
                     onRemove={handleRemove}
                   />
                 </TableCell>
@@ -463,7 +729,289 @@ const OrganizationParticipantManagement = () => {
           color="primary"
         />
       </Box>
-    </Box>
+
+      <Dialog
+        open={verificationModal.open}
+        onClose={handleCloseVerificationModal}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {getDialogTitle(verificationModal.status)}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              multiline
+              rows={4}
+              label={getDialogLabel(verificationModal.status)}
+              value={verificationModal.status === "VERIFIED" ? verificationModal.verified_note : verificationModal.rejection_reason}
+              onChange={(e) =>
+                setVerificationModal((prev) => ({
+                  ...prev,
+                  [verificationModal.status === "VERIFIED" ? "verified_note" : "rejection_reason"]: e.target.value,
+                }))
+              }
+              required
+              sx={{ mb: 2 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseVerificationModal}>Cancel</Button>
+          <Button
+            onClick={handleVerificationSubmit}
+            variant="contained"
+            color={
+              verificationModal.status === "VERIFIED"
+                ? "success"
+                : verificationModal.status === "REJECTED"
+                ? "error"
+                : "warning"
+            }
+          >
+            {verificationModal.status === "VERIFIED"
+              ? "Verify"
+              : verificationModal.status === "REJECTED"
+              ? "Reject"
+              : "Unverify"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Detail Log Modal */}
+      <Dialog
+        open={detailLogModal.open}
+        onClose={handleCloseDetailLog}
+        maxWidth="md"
+        fullWidth
+        className="participant-detail-dialog"
+      >
+        <DialogTitle>Participant Details</DialogTitle>
+        <DialogContent className="participant-detail-content">
+          {detailLogModal.loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : detailLogModal.error ? (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {detailLogModal.error}
+            </Alert>
+          ) : detailLogModal.participant ? (
+            <>
+              {/* <div className="detail-row">
+                <div className="detail-label">Student ID</div>
+                <div className="detail-value">{detailLogModal.participant.student_id || 'N/A'}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Identify Code</div>
+                <div className="detail-value">{detailLogModal.participant.identify_code || 'N/A'}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Participant Name</div>
+                <div className="detail-value">{detailLogModal.participant.participant_name || 'N/A'}</div>
+              </div> */}
+              {/* <div className="detail-row">
+                <div className="detail-label">Major</div>
+                <div className="detail-value">{detailLogModal.participant.major || 'N/A'}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Activity</div>
+                <div className="detail-value">{detailLogModal.participant.activity_name}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Category</div>
+                <div className="detail-value">{detailLogModal.participant.activity_category}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Venue</div>
+                <div className="detail-value">{detailLogModal.participant.activity_venue}</div>
+              </div>
+              <div className="detail-row">
+                <div className="detail-label">Activity Status</div>
+                <div className="detail-value">
+                  <Chip
+                    label={detailLogModal.participant.activity_status}
+                    color={getStatusColor(detailLogModal.participant.activity_status)}
+                    size="small"
+                    className="detail-chip"
+                  />
+                </div>
+              </div> */}
+              <div className="detail-row flex justify-between items-center">
+                <div className="detail-label">Date Range:</div>
+                <div className="detail-value">
+                  {formatDate(detailLogModal.participant.start_date)} to {formatDate(detailLogModal.participant.end_date)}
+                </div>
+              </div>
+              <div className="detail-row flex justify-between items-center">
+                <div className="detail-label">Registered At:</div>
+                <div className="detail-value">
+                  {formatDate(detailLogModal.participant.registration_time)}
+                </div>
+              </div>
+              <div className="detail-row  flex justify-between items-center">
+                <div className="detail-label">Status:</div>
+                <div className="detail-value">
+                  <Chip
+                    label={detailLogModal.participant.participation_status}
+                    color={getStatusColor(detailLogModal.participant.participation_status)}
+                    size="small"
+                    className="detail-chip"
+                  />
+                </div>
+              </div>
+              <div className="detail-row flex justify-between items-center">
+                <div className="detail-label">Role:</div>
+                <div className="detail-value">
+                  <Chip
+                    label={detailLogModal.participant.participation_role}
+                    color={getRoleColor(detailLogModal.participant.participation_role)}
+                    size="small"
+                    className="detail-chip"
+                  />
+                </div>
+              </div>
+              <div className="detail-row flex justify-between items-center">
+                <div className="detail-label">Processed At:</div>
+                <div className="detail-value">
+                  {detailLogModal.participant.processed_at ? formatDate(detailLogModal.participant.processed_at) : 'N/A'}
+                </div>
+              </div>
+              <div className="detail-row flex justify-between items-center">
+                <div className="detail-label">Processed By:</div>
+                <div className="detail-value">{detailLogModal.participant.processed_by || 'N/A'}</div>
+              </div>
+              {detailLogModal.participant.rejection_reason && (
+                <div className="detail-row flex justify-between items-center">
+                  <div className="detail-label">Rejection Reason:</div>
+                  <div className="detail-value">{detailLogModal.participant.rejection_reason}</div>
+                </div>
+              )}
+              {detailLogModal.participant.verified_note && (
+                <div className="detail-row flex justify-between items-center">
+                  <div className="detail-label">Verification Note:</div>
+                  <div className="detail-value">{detailLogModal.participant.verified_note}</div>
+                </div>
+              )}
+            </>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDetailLog} variant="outlined" color="primary">
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Activity Details Section */}
+      {activityDetails && (
+        <Box sx={{ mt: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Activity Details
+          </Typography>
+
+          {/* Location Map */}
+          {activityDetails.latitude && activityDetails.longitude && (
+            <Box className="location-map-container">
+              <MapContainer
+                center={[activityDetails.latitude, activityDetails.longitude]}
+                zoom={15}
+                style={{ height: '100%', width: '100%' }}
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                />
+                <Marker position={[activityDetails.latitude, activityDetails.longitude]}>
+                  <Popup>
+                    <Typography variant="subtitle2">{activityDetails.activity_name}</Typography>
+                    <Typography variant="body2">{activityDetails.activity_venue}</Typography>
+                  </Popup>
+                </Marker>
+              </MapContainer>
+            </Box>
+          )}
+
+          {/* Location Details */}
+          <Box className="location-details">
+            <Box className="location-header">
+              <LocationOnIcon />
+              <Typography className="location-venue">
+                {activityDetails.activity_venue}
+              </Typography>
+            </Box>
+            <Typography className="location-address">
+              {activityDetails.address}
+            </Typography>
+          </Box>
+
+          {/* Feedbacks Section */}
+          <Box className="feedbacks-section">
+            <Box className="feedbacks-header">
+              <Typography className="feedbacks-title">
+                Participant Feedbacks
+              </Typography>
+              <Box className="feedbacks-stats">
+                <Box className="feedback-stat">
+                  <StarIcon color="warning" />
+                  <Typography>
+                    {feedbacks.length > 0
+                      ? (feedbacks.reduce((acc, curr) => acc + curr.rating, 0) / feedbacks.length).toFixed(1)
+                      : '0.0'}
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="text.secondary">
+                  ({feedbacks.length} reviews)
+                </Typography>
+              </Box>
+            </Box>
+
+            <Box className="feedbacks-container">
+              {feedbacks.map((feedback) => (
+                <Box key={feedback.id} className="feedback-card">
+                  <Box className="feedback-header">
+                    <Typography className="feedback-student">
+                      {feedback.student_name}
+                    </Typography>
+                    <Box className="feedback-rating">
+                      {renderStars(feedback.rating)}
+                    </Box>
+                  </Box>
+                  <Typography className="feedback-content">
+                    {feedback.content}
+                  </Typography>
+                  {feedback.response && (
+                    <Box className="feedback-response">
+                      <Typography className="feedback-response-header">
+                        Organization Response
+                      </Typography>
+                      <Typography className="feedback-response-content">
+                        {feedback.response}
+                      </Typography>
+                    </Box>
+                  )}
+                  <Box className="feedback-date">
+                    <Typography>
+                      {formatDate(feedback.created_at)}
+                    </Typography>
+                    {feedback.response && (
+                      <>
+                        <Typography className="feedback-date-separator">•</Typography>
+                        <Typography>
+                          Response: {formatDate(feedback.response_date)}
+                        </Typography>
+                      </>
+                    )}
+                  </Box>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        </Box>
+      )}
+      </Box>
   );
 };
 
