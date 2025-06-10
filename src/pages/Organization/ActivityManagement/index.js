@@ -74,7 +74,7 @@ const OrganizationActivityManagement = () => {
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [filters, setFilters] = useState({
-    status: ActivityStatus.PUBLISHED, // Default to PUBLISHED
+    status: null, // Default to PUBLISHED
     category: ActivityCategory.UNIVERSITY,
     startDateFrom: null,
     startDateTo: null,

@@ -151,7 +151,7 @@ const CreateActivity = () => {
       const data = await response.json();
       if (response.status === 201) {
         alert('Activity created successfully!');
-        navigate("/organization/dashboard");
+        navigate("/organization/activities");
       } else {
         setError(data.message || `Failed to create activity. Status: ${response.status}`);
       }
