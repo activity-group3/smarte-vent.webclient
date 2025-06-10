@@ -79,12 +79,12 @@ const StyledButton = styled(Button)(({ theme }) => ({
 
 const AccountRole = {
   ADMIN: "ADMIN",
-  // LECTURER: "LECTURER",
   STUDENT: "STUDENT",
   ORGANIZATION: "ORGANIZATION",
 };
 
 const MajorType = {
+  NONE: "",  // Empty string for None option
   IT: "IT",
   EE: "EE",
   IS: "IS",
@@ -334,9 +334,9 @@ const AdminAccountManage = () => {
       errors.phone = "Phone number must be 10-15 digits";
     }
 
-    // Major validation
-    if (!data.major) {
-      errors.major = "Major is required";
+    // Major validation - only required for STUDENT role
+    if (data.role === 'STUDENT' && !data.major) {
+      errors.major = "Major is required for student accounts";
     }
 
     // Role validation
@@ -359,7 +359,7 @@ const AdminAccountManage = () => {
         full_name: newAccount.fullName,
         email: newAccount.email,
         phone: newAccount.phone,
-        major: newAccount.major,
+        major: newAccount.major || null,
         role: newAccount.role,
       };
 
@@ -370,7 +370,7 @@ const AdminAccountManage = () => {
       }
 
       const token = localStorage.getItem("access_token");
-      const response = await fetch("http://localhost:8080/admin/accounts/create", {
+      const response = await fetch("http://localhost:8080/accounts/create", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -595,6 +595,7 @@ const AdminAccountManage = () => {
                   label="Major"
                 >
                   <MenuItem value="">All Majors</MenuItem>
+                <MenuItem value="">None</MenuItem>
                   {Object.values(MajorType).map((major) => (
                     <MenuItem key={major} value={major}>
                       {major}
@@ -921,15 +922,21 @@ const AdminAccountManage = () => {
                 <FormControl fullWidth error={!!validationErrors.major}>
                   <InputLabel>Major</InputLabel>
                   <StyledSelect
-                    value={newAccount.major}
+                    value={newAccount.major || ''}
                     onChange={handleNewAccountChange("major")}
                     label="Major"
+                    displayEmpty
                   >
-                    {Object.entries(MajorType).map(([key, value]) => (
-                      <MenuItem key={key} value={value}>
-                        {value}
-                      </MenuItem>
-                    ))}
+                    <MenuItem value="">
+                      <em>None</em>
+                    </MenuItem>
+                    {Object.entries(MajorType)
+                      .filter(([key]) => key !== 'NONE')
+                      .map(([key, value]) => (
+                        <MenuItem key={key} value={value}>
+                          {value}
+                        </MenuItem>
+                      ))}
                   </StyledSelect>
                   {validationErrors.major && (
                     <FormHelperText>{validationErrors.major}</FormHelperText>
