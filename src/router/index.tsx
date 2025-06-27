@@ -1,3 +1,4 @@
+import React from "react";
 import { useRoutes, Navigate } from "react-router-dom";
 import Login from "../pages/Auth/Login";
 import Register from "../pages/Auth/Register";
@@ -9,15 +10,15 @@ import MyActivities from "../pages/user/MyActivities";
 import MyParticipant from "../pages/user/MyParticipant";
 import DashboardLayout from "../layouts/StudentLayout";
 import AdminLayout from "../layouts/AdminLayout";
-import AdminDashboard from "../pages/Admin/Dashboard";
-import CreateActivity from "../pages/Admin/CreateActivity";
-import AdminActivityDetail from "../pages/Admin/ActivityDetail";
-import AdminParticipantManage from "../pages/Admin/Participant-Management";
-import AdminAccountManage from "../pages/Admin/Account-Management";
-import AdminActivityManage from "../pages/Admin/Activity-Management";
-import CreateAccount from "../pages/Admin/CreateAccount";
-import MyContributorActivity from "@/pages/user/Manage-Contribution";
-import ParticipantManage from "@/pages/user/Participant-Management";
+import AdminDashboard from "../pages/admin/Dashboard";
+import CreateActivity from "../pages/admin/CreateActivity";
+import AdminActivityDetail from "../pages/admin/ActivityDetail";
+import AdminParticipantManage from "../pages/admin/Participant-Management";
+import AdminAccountManage from "../pages/admin/Account-Management";
+import AdminActivityManage from "../pages/admin/Activity-Management";
+import CreateAccount from "../pages/admin/CreateAccount";
+import MyContributorActivity from "../pages/user/Manage-Contribution";
+import ParticipantManage from "../pages/user/Participant-Management";
 import OrganizationLayout from "../layouts/OrganizationLayout";
 import OrganizationActivityManagement from "../pages/Organization/ActivityManagement";
 import OrganizationCreateActivity from "../pages/Organization/CreateActivity";
@@ -25,26 +26,33 @@ import OrganizationInformation from "../pages/Organization/Information";
 import OrganizationList from "../pages/Organization/OrganizationList";
 import OrganizationAnalysis from "../pages/Organization/Analysis";
 import OrganizationDashboard from "../pages/Organization/Dashboard";
-import OrganizationParticipantManagement from "@/pages/Organization/ParticipantManagement";
-import OrganizationActivityDetail from "@/pages/Organization/ActivityDetail";
+import OrganizationParticipantManagement from "../pages/Organization/ParticipantManagement";
+import OrganizationActivityDetail from "../pages/Organization/ActivityDetail";
 import StudentAnalysis from "../pages/user/Analysis";
 
-const checkAdminRole = () => {
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "ORGANIZATION" | "STUDENT";
+  organization_name?: string;
+}
+
+const checkAdminRole = (): boolean => {
   const userData = localStorage.getItem("user");
   if (!userData) return false;
-  const user = JSON.parse(userData);
+  const user: User = JSON.parse(userData);
   return user.role === "ADMIN";
 };
 
-const checkOrganizationRole = () => {
+const checkOrganizationRole = (): boolean => {
   const userData = localStorage.getItem("user");
   if (!userData) return false;
-  const user = JSON.parse(userData);
+  const user: User = JSON.parse(userData);
   return user.role === "ORGANIZATION";
 };
 
-// Define the Router as a React component
-function Router() {
+const Router: React.FC = () => {
   const routes = useRoutes([
     {
       path: "/",
@@ -207,6 +215,6 @@ function Router() {
   ]);
 
   return routes;
-}
+};
 
 export default Router;

@@ -20,15 +20,30 @@ import {
 import NotificationDropdown from "../../components/NotificationDropdown";
 import AccountManagementModal from "../../components/AccountManagementModal";
 
-const OrganizationLayout = () => {
+interface User {  
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "ORGANIZATION" | "STUDENT";
+  organization_name?: string;
+}
+
+interface NavigationItem {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+  end?: boolean;
+}
+
+const OrganizationLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState("light");
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -36,7 +51,7 @@ const OrganizationLayout = () => {
       navigate("/auth/login");
       return;
     }
-    const user = JSON.parse(userData);
+    const user: User = JSON.parse(userData);
     if (user.role !== "ORGANIZATION") {
       navigate("/dashboard");
       return;
@@ -52,36 +67,36 @@ const OrganizationLayout = () => {
     }
   }, [theme]);
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
     navigate("/auth/login");
   };
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
-  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
-  const toggleProfileMenu = () => setProfileMenuOpen(!profileMenuOpen);
+  const toggleSidebar = (): void => setIsCollapsed(!isCollapsed);
+  const toggleMobileSidebar = (): void => setIsMobileOpen(!isMobileOpen);
+  const toggleProfileMenu = (): void => setProfileMenuOpen(!profileMenuOpen);
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     {
       path: "/organization/activities",
-      icon: <FaCalendar />,
+      icon: <FaCalendar /> as React.ReactNode,
       label: "Activities",
-      end: true // Add end prop here
+      end: true
     },
     {
       path: "/organization/activities/create",
-      icon: <FaPlus />,
+      icon: <FaPlus /> as React.ReactNode,
       label: "Create Activity"
     },
     {
       path: "/organization/analysis",
-      icon: <FaChartBar />,
+      icon: <FaChartBar /> as React.ReactNode,
       label: "Analysis"
     },
     {
       path: `/organization/${user?.id}/information`,
-      icon: <FaInfoCircle />,
+      icon: <FaInfoCircle /> as React.ReactNode,
       label: "Organization Info"
     }
   ];
@@ -188,7 +203,7 @@ const OrganizationLayout = () => {
                   <li key={item.path}>
                     <NavLink
                       to={item.path}
-                      end={item.end} // Pass end prop to NavLink
+                      end={item.end}
                       className={({ isActive }) =>
                         `flex items-center px-4 py-3 rounded-lg transition-colors ${
                           isActive
@@ -290,4 +305,5 @@ const OrganizationLayout = () => {
   );
 };
 
-export default OrganizationLayout;
+export default OrganizationLayout; 
+ 

@@ -21,13 +21,50 @@ import {
   VisibilityOff as VisibilityOffIcon,
   Save as SaveIcon,
 } from '@mui/icons-material';
-import { getMyAccount, updateAccount, changePassword } from '../../services/accountService';
+import { getMyAccount, updateAccount, changePassword } from '../../services/accountService'; 
 
-const AccountManagementModal = ({ open, onClose }) => {
-  const [activeTab, setActiveTab] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [accountData, setAccountData] = useState(null);
-  const [formData, setFormData] = useState({
+interface AccountManagementModalProps {
+  open: boolean;
+  onClose: () => void;
+}
+
+interface AccountData {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  studentCode?: string;
+  major?: string;
+  organizationName?: string;
+}
+
+interface FormData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  studentCode: string;
+  major: string;
+  organizationName: string;
+}
+
+interface PasswordData {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+interface UpdateAccountRequest {
+  id: string;
+  email: string;
+  phone: string;
+}
+
+const AccountManagementModal: React.FC<AccountManagementModalProps> = ({ open, onClose }) => {
+  const [activeTab, setActiveTab] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [accountData, setAccountData] = useState<AccountData | null>(null);
+  const [formData, setFormData] = useState<FormData>({
     id: '',
     name: '',
     email: '',
@@ -36,16 +73,16 @@ const AccountManagementModal = ({ open, onClose }) => {
     major: '',
     organizationName: '',
   });
-  const [passwordData, setPasswordData] = useState({
+  const [passwordData, setPasswordData] = useState<PasswordData>({
     oldPassword: '',
     newPassword: '',
     confirmPassword: '',
   });
-  const [showOldPassword, setShowOldPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(null);
+  const [showOldPassword, setShowOldPassword] = useState<boolean>(false);
+  const [showNewPassword, setShowNewPassword] = useState<boolean>(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -53,10 +90,10 @@ const AccountManagementModal = ({ open, onClose }) => {
     }
   }, [open]);
 
-  const fetchAccountData = async () => {
+  const fetchAccountData = async (): Promise<void> => {
     setLoading(true);
     try {
-      const data = await getMyAccount();
+      const data: AccountData = await getMyAccount();
       setAccountData(data);
       setFormData({
         id: data.id || '',
@@ -74,13 +111,13 @@ const AccountManagementModal = ({ open, onClose }) => {
     }
   };
 
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue);
     setError(null);
     setSuccess(null);
   };
 
-  const handleFormChange = (e) => {
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -88,7 +125,7 @@ const AccountManagementModal = ({ open, onClose }) => {
     }));
   };
 
-  const handlePasswordChange = (e) => {
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
     setPasswordData((prev) => ({
       ...prev,
@@ -96,13 +133,13 @@ const AccountManagementModal = ({ open, onClose }) => {
     }));
   };
 
-  const handleUpdateAccount = async () => {
+  const handleUpdateAccount = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
     
     try {
-      const dataToSubmit = {
+      const dataToSubmit: UpdateAccountRequest = {
         id: formData.id,
         email: formData.email,
         phone: formData.phone,
@@ -119,7 +156,7 @@ const AccountManagementModal = ({ open, onClose }) => {
     }
   };
 
-  const handleChangePassword = async () => {
+  const handleChangePassword = async (): Promise<void> => {
     setLoading(true);
     setError(null);
     setSuccess(null);
@@ -367,4 +404,4 @@ const AccountManagementModal = ({ open, onClose }) => {
   );
 };
 
-export default AccountManagementModal;
+export default AccountManagementModal; 

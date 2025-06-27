@@ -1,5 +1,59 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
+
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8080";
+
+interface ApiResponse<T> {
+  data: T;
+}
+
+interface ActivityStatistics {
+  totalParticipants: number;
+  confirmedParticipants: number;
+  pendingParticipants: number;
+  completedParticipants: number;
+  averageRating?: number;
+  feedbackCount?: number;
+  [key: string]: any;
+}
+
+interface ParticipationTrend {
+  date: string;
+  count: number;
+  [key: string]: any;
+}
+
+interface FeedbackAnalysis {
+  averageRating: number;
+  totalFeedback: number;
+  ratingDistribution: Record<number, number>;
+  [key: string]: any;
+}
+
+interface ComparativeAnalysis {
+  currentActivity: ActivityStatistics;
+  averageComparison: ActivityStatistics;
+  [key: string]: any;
+}
+
+interface TimeSeriesData {
+  timestamp: string;
+  value: number;
+  [key: string]: any;
+}
+
+interface EffectivenessMetrics {
+  roi: number;
+  costPerParticipant: number;
+  valueGenerated: number;
+  [key: string]: any;
+}
+
+interface ImprovementRecommendation {
+  area: string;
+  recommendation: string;
+  priority: "high" | "medium" | "low";
+  [key: string]: any;
+}
 
 /**
  * Service for handling activity statistics API calls
@@ -8,15 +62,18 @@ const activityStatisticsService = {
   /**
    * Get statistics for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to activity statistics data
+   * @returns {Promise<ActivityStatistics>} - Promise resolving to activity statistics data
    */
-  async getActivityStatistics(activityId) {
+  async getActivityStatistics(activityId: number): Promise<ActivityStatistics> {
     try {
-      const response = await axios.get(`${API_URL}/api/activity-statistics/${activityId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-        },
-      });
+      const response: AxiosResponse<ApiResponse<ActivityStatistics>> = await axios.get(
+        `${API_URL}/api/activity-statistics/${activityId}`, 
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+          },
+        }
+      );
       
       return response.data.data;
     } catch (error) {
@@ -30,14 +87,18 @@ const activityStatisticsService = {
    * @param {number} activityId - The ID of the activity
    * @param {Date} startDate - Start date for the time range
    * @param {Date} endDate - End date for the time range
-   * @returns {Promise} - Promise resolving to time-range specific activity statistics
+   * @returns {Promise<ActivityStatistics>} - Promise resolving to time-range specific activity statistics
    */
-  getActivityStatisticsByTimeRange: async (activityId, startDate, endDate) => {
+  getActivityStatisticsByTimeRange: async (
+    activityId: number, 
+    startDate: Date, 
+    endDate: Date
+  ): Promise<ActivityStatistics> => {
     try {
       const startDateISO = startDate.toISOString();
       const endDateISO = endDate.toISOString();
 
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<ActivityStatistics>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/time-range`, 
         {
           params: {
@@ -60,11 +121,11 @@ const activityStatisticsService = {
   /**
    * Get participation trend data for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to participation trend data
+   * @returns {Promise<ParticipationTrend[]>} - Promise resolving to participation trend data
    */
-  getParticipationTrend: async (activityId) => {
+  getParticipationTrend: async (activityId: number): Promise<ParticipationTrend[]> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<ParticipationTrend[]>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/participation-trend`,
         {
           headers: {
@@ -83,11 +144,11 @@ const activityStatisticsService = {
   /**
    * Get detailed feedback analysis for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to feedback analysis data
+   * @returns {Promise<FeedbackAnalysis>} - Promise resolving to feedback analysis data
    */
-  getFeedbackAnalysis: async (activityId) => {
+  getFeedbackAnalysis: async (activityId: number): Promise<FeedbackAnalysis> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<FeedbackAnalysis>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/feedback-analysis`,
         {
           headers: {
@@ -106,11 +167,11 @@ const activityStatisticsService = {
   /**
    * Get comparative analysis for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to comparative analysis data
+   * @returns {Promise<ComparativeAnalysis>} - Promise resolving to comparative analysis data
    */
-  getComparativeAnalysis: async (activityId) => {
+  getComparativeAnalysis: async (activityId: number): Promise<ComparativeAnalysis> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<ComparativeAnalysis>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/comparative-analysis`,
         {
           headers: {
@@ -129,11 +190,11 @@ const activityStatisticsService = {
   /**
    * Get time series data for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to time series data
+   * @returns {Promise<TimeSeriesData[]>} - Promise resolving to time series data
    */
-  getTimeSeriesData: async (activityId) => {
+  getTimeSeriesData: async (activityId: number): Promise<TimeSeriesData[]> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<TimeSeriesData[]>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/time-series`,
         {
           headers: {
@@ -154,11 +215,15 @@ const activityStatisticsService = {
    * @param {number} activityId - The ID of the activity
    * @param {number} estimatedCost - Estimated cost of the activity
    * @param {number} estimatedValue - Estimated value generated by the activity
-   * @returns {Promise} - Promise resolving to effectiveness metrics data
+   * @returns {Promise<EffectivenessMetrics>} - Promise resolving to effectiveness metrics data
    */
-  getEffectivenessMetrics: async (activityId, estimatedCost = 1000, estimatedValue = 2000) => {
+  getEffectivenessMetrics: async (
+    activityId: number, 
+    estimatedCost = 1000, 
+    estimatedValue = 2000
+  ): Promise<EffectivenessMetrics> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<EffectivenessMetrics>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/effectiveness-metrics`,
         {
           params: {
@@ -181,11 +246,11 @@ const activityStatisticsService = {
   /**
    * Get improvement recommendations for a specific activity
    * @param {number} activityId - The ID of the activity
-   * @returns {Promise} - Promise resolving to improvement recommendations data
+   * @returns {Promise<ImprovementRecommendation[]>} - Promise resolving to improvement recommendations data
    */
-  getImprovementRecommendations: async (activityId) => {
+  getImprovementRecommendations: async (activityId: number): Promise<ImprovementRecommendation[]> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<ImprovementRecommendation[]>> = await axios.get(
         `${API_URL}/api/activity-statistics/${activityId}/improvement-recommendations`,
         {
           headers: {
@@ -202,4 +267,4 @@ const activityStatisticsService = {
   },
 };
 
-export default activityStatisticsService;
+export default activityStatisticsService; 

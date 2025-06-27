@@ -1,6 +1,6 @@
-import { createTheme } from '@mui/material/styles';
+import { createTheme, Theme } from '@mui/material/styles';
 
-const theme = createTheme({
+const theme: Theme = createTheme({
   palette: {
     primary: {
       main: '#2c3e50',
@@ -37,28 +37,10 @@ const theme = createTheme({
         },
       },
     },
-    MuiDatePicker: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'white',
-        },
-      },
-    },
-    MuiTimePicker: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'white',
-        },
-      },
-    },
-    MuiDateTimePicker: {
-      styleOverrides: {
-        root: {
-          backgroundColor: 'white',
-        },
-      },
-    },
+    // Note: Date/Time picker components are from @mui/x-date-pickers
+    // and need separate styling approach
   },
 });
 
 export default theme; 
+ 

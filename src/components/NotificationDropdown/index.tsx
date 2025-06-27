@@ -26,28 +26,51 @@ import {
 import { format } from "date-fns";
 import notificationService from "../../services/notificationService";
 
-const NotificationDropdown = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [totalPages, setTotalPages] = useState(1);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedNotification, setSelectedNotification] = useState(null);
-  const [modalOpen, setModalOpen] = useState(false);
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  type: string;
+  createdAt: Date;
+  receiverId: string;
+  createdBy: string;
+}
+
+interface SelectedNotification extends Notification {
+  index: number;
+}
+
+interface NotificationResponse {
+  items: Notification[];
+  totalItems: number;
+  currentPage: number;
+  totalPages: number;
+  pageSize: number;
+}
+
+const NotificationDropdown: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
+  const [modalOpen, setModalOpen] = useState<boolean>(false);
   const isMenuOpen = Boolean(anchorEl);
-  const menuRef = useRef(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   // Fetch notifications and unread count
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (): Promise<void> => {
     setLoading(true);
     try {
-      const data = await notificationService.getNotifications(currentPage, 10); // Fixed size at 10
-      setNotifications(data.items);  // Replace instead of concat
+      const data: NotificationResponse = await notificationService.getNotifications(currentPage, 10);
+      setNotifications(data.items);
       setTotalPages(data.totalPages);
 
-      const count = await notificationService.getUnreadCount();
-      setCurrentPage((prev) => Math.min(prev, data.totalPages)); // Ensure currentPage does not exceed totalPages
+      const count: number = await notificationService.getUnreadCount();
+      setCurrentPage((prev) => Math.min(prev, data.totalPages));
       setUnreadCount(count);
     } catch (error) {
       console.error("Failed to fetch notifications", error);
@@ -63,7 +86,7 @@ const NotificationDropdown = () => {
     // Poll for new notifications every minute
     const interval = setInterval(() => {
       if (!isMenuOpen) {
-        notificationService.getUnreadCount().then(count => {
+        notificationService.getUnreadCount().then((count: number) => {
           setUnreadCount(count);
         });
       }
@@ -73,18 +96,18 @@ const NotificationDropdown = () => {
   }, []);
 
   // Handle opening the notification menu
-  const handleMenuOpen = (event) => {
+  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>): void => {
     setAnchorEl(event.currentTarget);
-    fetchNotifications(); // Refresh notifications when opening
+    fetchNotifications();
   };
 
   // Handle closing the notification menu
-  const handleMenuClose = () => {
+  const handleMenuClose = (): void => {
     setAnchorEl(null);
   };
 
   // Open notification detail modal
-  const handleOpenNotificationDetail = (notification, index) => {
+  const handleOpenNotificationDetail = (notification: Notification, index: number): void => {
     setSelectedNotification({ ...notification, index });
     setModalOpen(true);
     handleMenuClose();
@@ -96,12 +119,12 @@ const NotificationDropdown = () => {
   };
 
   // Close notification detail modal
-  const handleCloseModal = () => {
+  const handleCloseModal = (): void => {
     setModalOpen(false);
   };
 
   // Mark a notification as read
-  const handleMarkAsRead = async (id, index, stopPropagation = true) => {
+  const handleMarkAsRead = async (id: string, index: number, stopPropagation = true): Promise<void> => {
     try {
       await notificationService.markAsRead(id);
 
@@ -122,7 +145,7 @@ const NotificationDropdown = () => {
   };
 
   // Delete a notification
-  const handleDeleteNotification = async (id, index) => {
+  const handleDeleteNotification = async (id: string, index: number): Promise<void> => {
     try {
       await notificationService.deleteNotification(id);
 
@@ -145,7 +168,7 @@ const NotificationDropdown = () => {
   };
 
   // Delete notification from modal
-  const handleDeleteFromModal = async () => {
+  const handleDeleteFromModal = async (): Promise<void> => {
     if (selectedNotification) {
       await handleDeleteNotification(selectedNotification.id, selectedNotification.index);
       setModalOpen(false);
@@ -153,9 +176,9 @@ const NotificationDropdown = () => {
   };
 
   // Load more notifications
-  const handleLoadMore = () => {
+  const handleLoadMore = (): void => {
     if (currentPage < totalPages) {
-      fetchNotifications(currentPage + 1);
+      fetchNotifications();
     }
   };
 

@@ -29,7 +29,7 @@ import DataTable from '../../../components/charts/DataTable';
 
 // Import service
 import { studentStatisticsService } from '../../../services/studentStatisticsService';
-import { account } from '@/Context/user';
+import { account } from '@/context/user';
 
 const Analysis = () => {
     const [studentId, setStudentId] = useState(null); // For viewing specific student's stats (admin/manager only)

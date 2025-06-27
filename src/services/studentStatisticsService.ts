@@ -1,7 +1,30 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { snakeToCamel, camelToSnake } from '../utils/caseConverter';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+interface ApiResponse<T> {
+  data: T;
+}
+
+interface StudentStatistics {
+  totalActivities: number;
+  completedActivities: number;
+  pendingActivities: number;
+  totalParticipations: number;
+  averageRating?: number;
+  hoursContributed?: number;
+  [key: string]: any;
+}
+
+interface StudentFilter {
+  timePeriod?: string;
+  activityCategory?: string;
+  participationRole?: string;
+  participationStatus?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 // Add helper function to get auth header
 const getAuthHeader = () => {
@@ -15,15 +38,15 @@ const getAuthHeader = () => {
 export const studentStatisticsService = {
   /**
    * Get current student's statistics
-   * @returns {Promise} - The student statistics
+   * @returns {Promise<StudentStatistics>} - The student statistics
    */
-  getMyStatistics: async () => {
+  getMyStatistics: async (): Promise<StudentStatistics> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         `${API_URL}/api/student-statistics/my-statistics`,
         { headers: getAuthHeader() }
       );
-      return snakeToCamel(response.data.data); // Add .data here
+      return snakeToCamel(response.data.data);
     } catch (error) {
       console.error('Error fetching student statistics:', error);
       throw error;
@@ -33,15 +56,15 @@ export const studentStatisticsService = {
   /**
    * Get statistics for a specific student by ID
    * @param {number} studentId - The student ID
-   * @returns {Promise} - The student statistics
+   * @returns {Promise<StudentStatistics>} - The student statistics
    */
-  getStudentStatistics: async (studentId) => {
+  getStudentStatistics: async (studentId: number): Promise<StudentStatistics> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         `${API_URL}/api/student-statistics/student/${studentId}`,
         { headers: getAuthHeader() }
       );
-      return snakeToCamel(response.data.data); // Add .data here
+      return snakeToCamel(response.data.data);
     } catch (error) {
       console.error('Error fetching student statistics:', error);
       throw error;
@@ -50,11 +73,14 @@ export const studentStatisticsService = {
 
   /**
    * Get filtered statistics for a student
-   * @param {number} studentId - The student ID (optional, if not provided will use current student)
-   * @param {Object} filter - The filter options
-   * @returns {Promise} - The filtered student statistics
+   * @param {number | null} studentId - The student ID (optional, if not provided will use current student)
+   * @param {StudentFilter} filter - The filter options
+   * @returns {Promise<StudentStatistics>} - The filtered student statistics
    */
-  getFilteredStudentStatistics: async (studentId, filter) => {
+  getFilteredStudentStatistics: async (
+    studentId: number | null, 
+    filter: StudentFilter
+  ): Promise<StudentStatistics> => {
     try {
       const snakeCaseFilter = camelToSnake(filter);
       
@@ -70,14 +96,14 @@ export const studentStatisticsService = {
         ? `${API_URL}/api/student-statistics/student/${studentId}/filter`
         : `${API_URL}/api/student-statistics/my-statistics/filter`;
 
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         endpoint, 
         { 
           params,
           headers: getAuthHeader()
         }
       );
-      return snakeToCamel(response.data.data); // Add .data here
+      return snakeToCamel(response.data.data);
     } catch (error) {
       console.error('Error fetching filtered student statistics:', error);
       throw error;
@@ -86,12 +112,16 @@ export const studentStatisticsService = {
 
   /**
    * Get statistics for a student within a date range
-   * @param {number} studentId - The student ID (optional, if not provided will use current student)
+   * @param {number | null} studentId - The student ID (optional, if not provided will use current student)
    * @param {string} startDate - The start date (ISO format)
    * @param {string} endDate - The end date (ISO format)
-   * @returns {Promise} - The date range student statistics
+   * @returns {Promise<StudentStatistics>} - The date range student statistics
    */
-  getDateRangeStatistics: async (studentId, startDate, endDate) => {
+  getDateRangeStatistics: async (
+    studentId: number | null, 
+    startDate: string, 
+    endDate: string
+  ): Promise<StudentStatistics> => {
     try {
       const params = new URLSearchParams();
       params.append('start_date', startDate);
@@ -101,17 +131,17 @@ export const studentStatisticsService = {
         ? `${API_URL}/api/student-statistics/student/${studentId}/date-range`
         : `${API_URL}/api/student-statistics/my-statistics/date-range`;
 
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         endpoint,
         { 
           params,
           headers: getAuthHeader()
         }
       );
-      return snakeToCamel(response.data.data); // Add .data here
+      return snakeToCamel(response.data.data);
     } catch (error) {
       console.error('Error fetching date range student statistics:', error);
       throw error;
     }
   }
-};
+}; 

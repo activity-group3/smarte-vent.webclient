@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
-import { account } from "@/Context/user";
+import { account } from "@/context/user";
 
 // Material-UI Components
 import {

@@ -22,19 +22,33 @@ import {
   FaStar,
   FaUserCog,
 } from "react-icons/fa";
-import NotificationDropdown from "../../components/NotificationDropdown";
 import AccountManagementModal from "../../components/AccountManagementModal";
 import "./dashboardLayout.css";
+import NotificationDropdown from "../../components/NotificationDropdown";
 
-const StudentLayout = () => {
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "ORGANIZATION" | "STUDENT";
+}
+
+interface NavigationItem {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+  exact: boolean;
+}
+
+const StudentLayout: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState("light");
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -42,7 +56,7 @@ const StudentLayout = () => {
       navigate("/auth/login");
       return;
     }
-    const user = JSON.parse(userData);
+    const user: User = JSON.parse(userData);
     if (user.role !== "STUDENT") {
       navigate("/dashboard");
       return;
@@ -52,7 +66,7 @@ const StudentLayout = () => {
     // Check for saved theme preference
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
-      setTheme(savedTheme);
+      setTheme(savedTheme as "light" | "dark");
     }
   }, [navigate]);
 
@@ -66,18 +80,18 @@ const StudentLayout = () => {
     }
   }, [theme]);
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
     navigate("/auth/login");
   };
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
-  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
-  const toggleProfileMenu = () => setProfileMenuOpen(!profileMenuOpen);
-  const toggleTheme = () => setTheme(theme === "light" ? "dark" : "light");
+  const toggleSidebar = (): void => setIsCollapsed(!isCollapsed);
+  const toggleMobileSidebar = (): void => setIsMobileOpen(!isMobileOpen);
+  const toggleProfileMenu = (): void => setProfileMenuOpen(!profileMenuOpen);
+  const toggleTheme = (): void => setTheme(theme === "light" ? "dark" : "light");
 
-  const navigationItems = [
+  const navigationItems: NavigationItem[] = [
     {
       path: "/dashboard",
       icon: <FaTachometerAlt />,
@@ -96,12 +110,6 @@ const StudentLayout = () => {
       label: "My Contributions",
       exact: false
     },
-    // {
-    //   path: "/organizations",
-    //   icon: <FaGraduationCap />,
-    //   label: "Organizations",
-    //   exact: true
-    // },
     {
       path: "/my-analysis",
       icon: <FaChartBar />,
@@ -299,4 +307,4 @@ const StudentLayout = () => {
   );
 };
 
-export default StudentLayout;
+export default StudentLayout; 

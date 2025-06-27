@@ -18,14 +18,27 @@ import {
 import NotificationDropdown from "../../components/NotificationDropdown";
 import AccountManagementModal from "../../components/AccountManagementModal";
 
-const AdminLayout = () => {
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "ORGANIZATION" | "STUDENT";
+}
+
+interface NavigationItem {
+  path: string;
+  icon: React.ReactNode;
+  label: string;
+}
+
+const AdminLayout: React.FC = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
-  const [theme, setTheme] = useState("light");
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
+  const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
+  const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -33,7 +46,7 @@ const AdminLayout = () => {
       navigate("/auth/login");
       return;
     }
-    const user = JSON.parse(userData);
+    const user: User = JSON.parse(userData);
     if (user.role !== "ADMIN") {
       navigate("/dashboard");
       return;
@@ -49,30 +62,24 @@ const AdminLayout = () => {
     }
   }, [theme]);
 
-  const handleLogout = () => {
+  const handleLogout = (): void => {
     localStorage.removeItem("access_token");
     localStorage.removeItem("user");
     navigate("/auth/login");
   };
 
-  const toggleSidebar = () => setIsCollapsed(!isCollapsed);
-  const toggleMobileSidebar = () => setIsMobileOpen(!isMobileOpen);
-  const toggleProfileMenu = () => setProfileMenuOpen(!profileMenuOpen);
+  const toggleSidebar = (): void => setIsCollapsed(!isCollapsed);
+  const toggleMobileSidebar = (): void => setIsMobileOpen(!isMobileOpen);
+  const toggleProfileMenu = (): void => setProfileMenuOpen(!profileMenuOpen);
 
-  const navigationItems = [
-    { path: "/admin/dashboard", icon: <FaTachometerAlt />, label: "Dashboard" },
-    // {
-    //   path: "/admin/activities/create",
-    //   icon: <FaPlus />,
-    //   label: "Create Activity",
-    // },
-    { path: "/admin/accounts", icon: <FaUsers />, label: "Account Management" },
+  const navigationItems: NavigationItem[] = [
+    { path: "/admin/dashboard", icon: <FaTachometerAlt /> as React.ReactNode, label: "Dashboard" },
+    { path: "/admin/accounts", icon: <FaUsers /> as React.ReactNode, label: "Account Management" },
     {
       path: "/admin/activities",
-      icon: <FaCalendar />,
+      icon: <FaCalendar /> as React.ReactNode,
       label: "Activity Management",
     },
-    // { path: "/admin/settings", icon: <FaCog />, label: "Settings" },
   ];
 
   return (
@@ -275,3 +282,4 @@ const AdminLayout = () => {
 };
 
 export default AdminLayout;
+ 

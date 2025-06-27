@@ -29,7 +29,7 @@ import DataTable from '../../../components/charts/DataTable';
 
 // Import service
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
-import { account } from '@/Context/user';
+import { account } from '@/context/user';
 
 const Analysis = () => {
   const { organizationId } = useParams();

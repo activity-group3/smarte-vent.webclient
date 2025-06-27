@@ -39,7 +39,7 @@ import {
   FaCheck,
   FaChartBar,
 } from "react-icons/fa";
-import { account } from "@/Context/user";
+import { account } from "@/context/user";
 import ActivityUpdateForm from '@/components/ActivityUpdateForm';
 import ActivityStatisticsModal from '@/components/ActivityStatisticsModal';
 import activityStatisticsService from '@/services/activityStatisticsService';

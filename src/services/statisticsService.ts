@@ -1,7 +1,30 @@
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import { snakeToCamel, camelToSnake } from '../utils/caseConverter';
 
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+interface ApiResponse<T> {
+  data: T;
+}
+
+// Removed AuthHeaders interface to fix TypeScript compatibility
+
+interface GeneralStatistics {
+  totalActivities: number;
+  totalParticipants: number;
+  totalOrganizations: number;
+  completedActivities: number;
+  pendingActivities: number;
+  [key: string]: any;
+}
+
+interface FilterDto {
+  timePeriod?: string;
+  activityType?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
 // Add helper function to get auth header
 const getAuthHeader = () => {
@@ -15,11 +38,11 @@ const getAuthHeader = () => {
 export const statisticsService = {
   /**
    * Get overall statistics without filtering
-   * @returns {Promise} - The statistics
+   * @returns {Promise<GeneralStatistics>} - The statistics
    */
-  getStatistics: async () => {
+  getStatistics: async (): Promise<GeneralStatistics> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         `${API_URL}/statistics`,
         { headers: getAuthHeader() }
       );
@@ -32,10 +55,10 @@ export const statisticsService = {
 
   /**
    * Get filtered statistics with custom filters
-   * @param {Object} filterDto - The filter options
-   * @returns {Promise} - The filtered statistics
+   * @param {FilterDto} filterDto - The filter options
+   * @returns {Promise<GeneralStatistics>} - The filtered statistics
    */
-  getFilteredStatistics: async (filterDto) => {
+  getFilteredStatistics: async (filterDto: FilterDto): Promise<GeneralStatistics> => {
     try {
       const snakeCaseFilter = camelToSnake(filterDto);
       
@@ -46,7 +69,7 @@ export const statisticsService = {
       if (snakeCaseFilter.start_date) params.append('start_date', snakeCaseFilter.start_date);
       if (snakeCaseFilter.end_date) params.append('end_date', snakeCaseFilter.end_date);
 
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         `${API_URL}/statistics/filter`, 
         { 
           params,
@@ -64,11 +87,11 @@ export const statisticsService = {
   /**
    * Get time-based statistics
    * @param {string} period - The time period (daily, weekly, monthly, quarterly, yearly)
-   * @returns {Promise} - The time-based statistics
+   * @returns {Promise<GeneralStatistics>} - The time-based statistics
    */
-  getTimePeriodStatistics: async (period) => {
+  getTimePeriodStatistics: async (period: string): Promise<GeneralStatistics> => {
     try {
-      const response = await axios.get(
+      const response: AxiosResponse<ApiResponse<any>> = await axios.get(
         `${API_URL}/statistics/${period}`,
         { headers: getAuthHeader() }
       );
@@ -78,4 +101,5 @@ export const statisticsService = {
       throw error;
     }
   }
-};
+}; 
+ 
