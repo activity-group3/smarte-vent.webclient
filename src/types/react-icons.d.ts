@@ -48,4 +48,8 @@ declare module 'react-icons/fa' {
   export const FaSearch: IconType;
   export const FaFilter: IconType;
   export const FaChartLine: IconType;
+  export const FaCalendarCheck: IconType;
+  export const FaCheck: IconType;
+  export const FaUserCheck: IconType;
+  export const FaUserShield: IconType;
 } 

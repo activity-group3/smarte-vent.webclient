@@ -63,10 +63,15 @@ const StyledTextarea = styled(TextareaAutosize)(({ theme }) => ({
   },
 }));
 
-const ActivityUpdateForm = ({ activity, onSubmit, onCancel }) => {
-  // existing implementation unchanged
-  // (copy the entire body from original file)
+export interface ActivityUpdateFormProps {
+  activity: unknown;
+  onSubmit: (updatedActivity: unknown) => void;
+  onCancel: () => void;
+}
 
+const ActivityUpdateForm: React.FC<ActivityUpdateFormProps> = () => {
+  // TODO: Replace this stub with the full implementation.
+  return null;
 };
 
 export default ActivityUpdateForm;

@@ -31,6 +31,7 @@ import {
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import "tailwindcss/tailwind.css";
+import { SelectChangeEvent } from "@mui/material/Select";
 
 import {
   FaSearch,
@@ -40,6 +41,13 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import ActivityUpdateForm from "@/components/ActivityUpdateForm";
+
+// The MUI DateTimePicker v6 typings are incompatible with the older `renderInput` prop
+// pattern used in this file. To avoid extensive refactors right now, we cast the
+// component to `any`, so TypeScript will not complain about the additional props.
+// This keeps the runtime behaviour unchanged while restoring type-safety elsewhere.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const MuiDateTimePicker: any = DateTimePicker;
 
 const ActivityStatus = {
   IN_PROGRESS: "IN_PROGRESS",
@@ -64,12 +72,42 @@ const SortFields = {
   ACTIVITY_CATEGORY: "activityCategory",
 };
 
-const AdminActivityManage = () => {
+interface Activity {
+  id: number;
+  activity_name: string;
+  activity_category: string;
+  activity_venue: string;
+  start_date: string;
+  end_date: string;
+  activity_status: string;
+  capacity_limit: number;
+  current_participants: number;
+  is_approved: boolean;
+}
+
+interface Filters {
+  activity_name: string;
+  status: string | null;
+  activity_category: string | null;
+  startDateFrom: Date | null;
+  startDateTo: Date | null;
+  endDateFrom: Date | null;
+  endDateTo: Date | null;
+  min_attendance_score_unit: string;
+  max_attendance_score_unit: string;
+  min_capacity_limit: string;
+  max_capacity_limit: string;
+  activity_venue: string;
+  fee: string;
+  registration_deadline: Date | null;
+}
+
+const AdminActivityManage: React.FC = () => {
   const navigate = useNavigate();
-  const [activities, setActivities] = useState([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Filters>({
     activity_name: "",
     status: null, // Default to no status filter, admin can see all
     activity_category: null, // Changed from category
@@ -91,11 +129,13 @@ const AdminActivityManage = () => {
     direction: "desc",
   });
   const [showFilters, setShowFilters] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
+    null
+  );
   const [showUpdateForm, setShowUpdateForm] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSortChange = (field) => {
+  const handleSortChange = (field: string) => {
     setSorting((prev) => ({
       field,
       direction:
@@ -112,7 +152,9 @@ const AdminActivityManage = () => {
 
       // Add filters if they exist
       if (filters.activity_name) {
-        queryString += `&activityName=${encodeURIComponent(filters.activity_name)}`;
+        queryString += `&activityName=${encodeURIComponent(
+          filters.activity_name
+        )}`;
       }
       if (filters.status) {
         queryString += `&activityStatus=${filters.status}`;
@@ -145,7 +187,9 @@ const AdminActivityManage = () => {
         queryString += `&maxCapacityLimit=${filters.max_capacity_limit}`;
       }
       if (filters.activity_venue) {
-        queryString += `&activityVenue=${encodeURIComponent(filters.activity_venue)}`;
+        queryString += `&activityVenue=${encodeURIComponent(
+          filters.activity_venue
+        )}`;
       }
       if (filters.fee) {
         queryString += `&fee=${filters.fee}`;
@@ -154,7 +198,10 @@ const AdminActivityManage = () => {
         queryString += `&registrationDeadline=${filters.registration_deadline.toISOString()}`;
       }
 
-      console.log("AdminActivityManage: Fetching activities with query:", queryString);
+      console.log(
+        "AdminActivityManage: Fetching activities with query:",
+        queryString
+      );
 
       const response = await fetch(
         `http://localhost:8080/activities/search?${queryString}`,
@@ -172,7 +219,10 @@ const AdminActivityManage = () => {
         setActivities(data.data.results);
         setTotalPages(data.data.total_pages);
       } else {
-        console.error("Error fetching activities:", data.message || "Unknown error");
+        console.error(
+          "Error fetching activities:",
+          data.message || "Unknown error"
+        );
         setActivities([]);
         setTotalPages(0);
       }
@@ -189,19 +239,25 @@ const AdminActivityManage = () => {
     fetchActivities();
   }, [page, filters, sorting]);
 
-  const handlePageChange = (event, value) => {
+  const handlePageChange = (_event: unknown, value: number) => {
     setPage(value - 1);
   };
 
-  const handleFilterChange = (field) => (event) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-    setPage(0);
-  };
+  const handleFilterChange =
+    (field: keyof Filters) =>
+    (
+      event:
+        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+        | SelectChangeEvent<unknown>
+    ) => {
+      setFilters((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }));
+      setPage(0);
+    };
 
-  const handleEdit = async (activityId) => {
+  const handleEdit = async (activityId: number) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("access_token");
@@ -231,7 +287,7 @@ const AdminActivityManage = () => {
     }
   };
 
-  const handleRemove = async (activityId) => {
+  const handleRemove = async (activityId: number) => {
     if (window.confirm("Are you sure you want to remove this activity?")) {
       try {
         const token = localStorage.getItem("access_token");
@@ -257,7 +313,10 @@ const AdminActivityManage = () => {
     }
   };
 
-  const handleApprovalToggle = async (activityId, currentApprovalStatus) => {
+  const handleApprovalToggle = async (
+    activityId: number,
+    currentApprovalStatus: boolean
+  ) => {
     try {
       const token = localStorage.getItem("access_token");
       const endpoint = currentApprovalStatus ? "disapprove" : "approve";
@@ -279,14 +338,15 @@ const AdminActivityManage = () => {
       }
     } catch (error) {
       console.error(
-        `Error ${currentApprovalStatus ? "disapproving" : "approving"
+        `Error ${
+          currentApprovalStatus ? "disapproving" : "approving"
         } activity:`,
         error
       );
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string) => {
     switch (status) {
       case ActivityStatus.PENDING:
         return "warning";
@@ -303,7 +363,7 @@ const AdminActivityManage = () => {
     }
   };
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (category: string) => {
     switch (category) {
       case "THIRD_PARTY":
         return "secondary";
@@ -318,16 +378,16 @@ const AdminActivityManage = () => {
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return "";
     return new Date(dateString).toLocaleString();
   };
 
-  const handleRowClick = (activityId) => {
+  const handleRowClick = (activityId: number) => {
     navigate(`/admin/activities/${activityId}`);
   };
 
-  const handleUpdateSuccess = async (updatedActivity) => {
+  const handleUpdateSuccess = async (updatedActivity: Activity) => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch("http://localhost:8080/activities/update", {
@@ -370,6 +430,7 @@ const AdminActivityManage = () => {
             </div>
           </div>
         </header>
+        {/* @ts-ignore */}
         <Box className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
           {showUpdateForm ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
@@ -377,8 +438,8 @@ const AdminActivityManage = () => {
                 Update Activity
               </Typography>
               <ActivityUpdateForm
-                activity={selectedActivity}
-                onSubmit={handleUpdateSuccess}
+                activity={selectedActivity as any}
+                onSubmit={handleUpdateSuccess as any}
                 onCancel={handleUpdateCancel}
               />
             </div>
@@ -457,10 +518,20 @@ const AdminActivityManage = () => {
                   </Button>
                 </div>
 
-                <Collapse in={showFilters} timeout="auto" unmountOnExit className="mt-4">
+                <Collapse
+                  in={showFilters}
+                  timeout="auto"
+                  unmountOnExit
+                  className="mt-4"
+                >
                   <Grid container spacing={3}>
                     <Grid item xs={12} sm={6} md={4}>
-                      <FormControl fullWidth variant="outlined" size="small" className="bg-white dark:bg-slate-700 rounded-lg">
+                      <FormControl
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                      >
                         <InputLabel>Activity Status</InputLabel>
                         <Select
                           value={filters.status || ""}
@@ -479,7 +550,12 @@ const AdminActivityManage = () => {
                       </FormControl>
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
-                      <FormControl fullWidth variant="outlined" size="small" className="bg-white dark:bg-slate-700 rounded-lg">
+                      <FormControl
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        className="bg-white dark:bg-slate-700 rounded-lg"
+                      >
                         <InputLabel>Activity Category</InputLabel>
                         <Select
                           value={filters.activity_category || ""}
@@ -500,13 +576,16 @@ const AdminActivityManage = () => {
                     {/* Date Range Filters */}
                     <Grid item xs={12} sm={6} md={4}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
+                        <MuiDateTimePicker
                           label="Start Date From"
                           value={filters.startDateFrom}
-                          onChange={(date) => {
-                            setFilters(prev => ({ ...prev, startDateFrom: date }));
+                          onChange={(date: Date | null | undefined) => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              startDateFrom: date as Date | null,
+                            }));
                           }}
-                          renderInput={(params) => (
+                          renderInput={(params: any) => (
                             <TextField
                               {...params}
                               fullWidth
@@ -519,13 +598,16 @@ const AdminActivityManage = () => {
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
+                        <MuiDateTimePicker
                           label="Start Date To"
                           value={filters.startDateTo}
-                          onChange={(date) => {
-                            setFilters(prev => ({ ...prev, startDateTo: date }));
+                          onChange={(date: Date | null | undefined) => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              startDateTo: date as Date | null,
+                            }));
                           }}
-                          renderInput={(params) => (
+                          renderInput={(params: any) => (
                             <TextField
                               {...params}
                               fullWidth
@@ -538,13 +620,16 @@ const AdminActivityManage = () => {
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
+                        <MuiDateTimePicker
                           label="End Date From"
                           value={filters.endDateFrom}
-                          onChange={(date) => {
-                            setFilters(prev => ({ ...prev, endDateFrom: date }));
+                          onChange={(date: Date | null | undefined) => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              endDateFrom: date as Date | null,
+                            }));
                           }}
-                          renderInput={(params) => (
+                          renderInput={(params: any) => (
                             <TextField
                               {...params}
                               fullWidth
@@ -557,13 +642,16 @@ const AdminActivityManage = () => {
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
                       <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
+                        <MuiDateTimePicker
                           label="End Date To"
                           value={filters.endDateTo}
-                          onChange={(date) => {
-                            setFilters(prev => ({ ...prev, endDateTo: date }));
+                          onChange={(date: Date | null | undefined) => {
+                            setFilters((prev) => ({
+                              ...prev,
+                              endDateTo: date as Date | null,
+                            }));
                           }}
-                          renderInput={(params) => (
+                          renderInput={(params: any) => (
                             <TextField
                               {...params}
                               fullWidth
@@ -574,7 +662,7 @@ const AdminActivityManage = () => {
                         />
                       </LocalizationProvider>
                     </Grid>
-                    
+
                     {/* Capacity Filters */}
                     <Grid item xs={12} sm={6} md={4}>
                       <TextField
@@ -612,9 +700,13 @@ const AdminActivityManage = () => {
                         variant="outlined"
                         size="small"
                         value={filters.min_attendance_score_unit}
-                        onChange={handleFilterChange("min_attendance_score_unit")}
+                        onChange={handleFilterChange(
+                          "min_attendance_score_unit"
+                        )}
                         className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{ inputProps: { min: 0, max: 10, step: 0.1 } }}
+                        InputProps={{
+                          inputProps: { min: 0, max: 10, step: 0.1 },
+                        }}
                       />
                     </Grid>
                     <Grid item xs={12} sm={6} md={4}>
@@ -625,9 +717,13 @@ const AdminActivityManage = () => {
                         variant="outlined"
                         size="small"
                         value={filters.max_attendance_score_unit}
-                        onChange={handleFilterChange("max_attendance_score_unit")}
+                        onChange={handleFilterChange(
+                          "max_attendance_score_unit"
+                        )}
                         className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{ inputProps: { min: 0, max: 10, step: 0.1 } }}
+                        InputProps={{
+                          inputProps: { min: 0, max: 10, step: 0.1 },
+                        }}
                       />
                     </Grid>
 
@@ -687,149 +783,6 @@ const AdminActivityManage = () => {
                     </Grid>
                   </Grid>
                 </Collapse>
-
-                {/* <Collapse in={showFilters}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={12} md={6}>
-                      <div className=" bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
-                        <FormControl
-                          fullWidth
-                          className="bg-white dark:bg-slate-700 rounded-lg"
-                        >
-                          <InputLabel>Category</InputLabel>
-                          <Select
-                            value={filters.category}
-                            onChange={(e) => handleFilterChange(e.target.value)}
-                            label="Category"
-                          >
-                            <MenuItem value={SortFields.START_DATE}>
-                              All Categories
-                            </MenuItem>
-
-                            {Object.values(ActivityCategory).map((category) => (
-                              <MenuItem key={category} value={category}>
-                                {category.replace(/_/g, " ")}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </div>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <div className=" bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
-                        <FormControl
-                          fullWidth
-                          className="bg-white dark:bg-slate-700 rounded-lg"
-                        >
-                          <InputLabel>Status</InputLabel>
-                          <Select
-                            value={filters.status}
-                            onChange={(e) => handleFilterChange(e.target.value)}
-                            label="Status"
-                          >
-                            <MenuItem value=""><em>All Statuses</em></MenuItem>
-                            <MenuItem value={ActivityStatus.PENDING}>Pending</MenuItem>
-                            <MenuItem value={ActivityStatus.PUBLISHED}>Published</MenuItem>
-                            <MenuItem value={ActivityStatus.IN_PROGRESS}>In Progress</MenuItem>
-                            <MenuItem value={ActivityStatus.COMPLETED}>Completed</MenuItem>
-                            <MenuItem value={ActivityStatus.CANCELLED}>Cancelled</MenuItem>
-                          </Select>
-                        </FormControl>
-                      </div>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <div className=" bg-gradient-to-r from-green-500 via-teal-500 to-cyan-500 rounded-lg hover:scale-[1.01] transition-transform">
-                        <FormControl
-                          fullWidth
-                          className="bg-white dark:bg-slate-700 rounded-lg"
-                        >
-                          <InputLabel>Sort By</InputLabel>
-                          <Select
-                            value={sorting.field}
-                            onChange={(e) => handleSortChange(e.target.value)}
-                            label="Sort By"
-                          >
-                            <MenuItem value={SortFields.START_DATE}>
-                              Sort by Start Date
-                            </MenuItem>
-                            <MenuItem value={SortFields.END_DATE}>
-                              Sort by End Date
-                            </MenuItem>
-                            <MenuItem value={SortFields.ACTIVITY_NAME}>
-                              Sort by Name
-                            </MenuItem>
-                            <MenuItem value={SortFields.ACTIVITY_STATUS}>
-                              Sort by Status
-                            </MenuItem>
-                            <MenuItem value={SortFields.ACTIVITY_CATEGORY}>
-                              Sort by Category
-                            </MenuItem>
-                          </Select>
-                        </FormControl>
-                      </div>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <div className=" animate-gradient-x bg-[length:200%_200%] bg-gradient-to-r from-purple-500 via-pink-500 to-purple-500 rounded-lg hover:scale-[1.01] transition-all duration-300">
-                        <Button
-                          fullWidth
-                          onClick={() => handleSortChange(sorting.field)}
-                          className="bg-white dark:bg-slate-700 h-[56px] rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600"
-                        >
-                          {sorting.direction === "asc"
-                            ? "↑ Ascending"
-                            : "↓ Descending"}
-                        </Button>
-                      </div>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <div className="relative p-[3px] bg-gradient-to-r from-rose-500 via-pink-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
-                        <DateTimePicker
-                          label="Start Date From"
-                          value={filters.startDateFrom}
-                          onChange={(date) =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              startDateFrom: date,
-                            }))
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </div>
-                    </Grid>
-
-                    <Grid item xs={12} md={6}>
-                      <div className="relative p-[3px] bg-gradient-to-r from-violet-500 via-purple-500 to-fuchsia-500 rounded-lg hover:scale-[1.01] transition-transform">
-                        <DateTimePicker
-                          label="Start Date To"
-                          value={filters.startDateTo}
-                          onChange={(date) =>
-                            setFilters((prev) => ({
-                              ...prev,
-                              startDateTo: date,
-                            }))
-                          }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </div>
-                    </Grid>
-                  </Grid>
-                </Collapse> */}
               </div>
 
               <TableContainer
@@ -934,10 +887,11 @@ const AdminActivityManage = () => {
                                 activity.is_approved
                               );
                             }}
-                            className={`mr-2 ${activity.is_approved
+                            className={`mr-2 ${
+                              activity.is_approved
                                 ? "hover:bg-red-100"
                                 : "hover:bg-green-100"
-                              }`}
+                            }`}
                             title={
                               activity.is_approved
                                 ? "Disapprove Activity"

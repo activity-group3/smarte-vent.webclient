@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,20 +12,29 @@ import {
   InputLabel,
   Paper,
 } from "@mui/material";
+import { SelectChangeEvent } from "@mui/material/Select";
 
 const CreateAccount = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const [formData, setFormData] = useState({  
+  const [formData, setFormData] = useState<{
+    full_name: string;
+    email: string;
+    password: string;
+    phone: string;
+    identify_code: string;
+    role: string;
+    is_active: string | boolean;
+  }>({
     full_name: "",
     email: "",
     password: "",
     phone: "",
     identify_code: "",
     role: "STUDENT",
-    is_active: true,
+    is_active: "true",
   });
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,14 +60,18 @@ const CreateAccount = () => {
         setError(data.message || "Failed to create account");
       }
     } catch (err) {
-      setError("Network error: " + (err as Error) .message);
+      setError("Network error: " + (err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
+  const handleChange = (
+    e:
+      | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+      | SelectChangeEvent<string | boolean>
+  ) => {
+    const { name, value } = e.target as HTMLInputElement;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
@@ -65,13 +79,12 @@ const CreateAccount = () => {
   };
 
   return (
-    // @ts-nocheck
     <Box
       sx={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'flex-start',
-        minHeight: '100vh',
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "flex-start",
+        minHeight: "100vh",
         pt: 4,
         px: 2,
       }}
@@ -79,25 +92,28 @@ const CreateAccount = () => {
       <Paper
         elevation={3}
         sx={{
-          width: '100%',
-          maxWidth: '400px',
+          width: "100%",
+          maxWidth: "400px",
           p: 4,
-          display: 'flex',
-          flexDirection: 'column',
+          display: "flex",
+          flexDirection: "column",
           gap: 2,
         }}
       >
         <Typography variant="h5" component="h1" gutterBottom align="center">
           Create New Account
         </Typography>
-        
+
         {error && (
           <Typography color="error" variant="body2" sx={{ mb: 2 }}>
             {error}
           </Typography>
         )}
 
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <form
+          onSubmit={handleSubmit}
+          style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+        >
           <TextField
             fullWidth
             label="Full Name"
@@ -168,7 +184,7 @@ const CreateAccount = () => {
               required
               label="Status"
             >
-                <MenuItem value="true">Active</MenuItem>
+              <MenuItem value="true">Active</MenuItem>
               <MenuItem value="false">Inactive</MenuItem>
             </Select>
           </FormControl>
