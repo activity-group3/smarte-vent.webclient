@@ -1,46 +1,60 @@
 import { createTheme, Theme } from '@mui/material/styles';
 
-const theme: Theme = createTheme({
+// Centralized MUI theme configuration
+// Adjust the palette, typography, and other options as needed
+
+// Light theme
+const lightTheme: Theme = createTheme({
   palette: {
+    mode: 'light',
     primary: {
-      main: '#2c3e50',
+      main: '#047857', // emerald-700
     },
     secondary: {
-      main: '#34495e',
+      main: '#14b8a6', // teal-500
     },
     background: {
-      default: '#f8f9fa',
+      default: '#f0fdf4', // green-50
     },
   },
   typography: {
-    fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
-    h3: {
-      fontWeight: 600,
-    },
-    h6: {
-      fontWeight: 500,
-    },
-  },
-  components: {
-    MuiPaper: {
-      styleOverrides: {
-        root: {
-          borderRadius: 8,
-        },
-      },
-    },
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          textTransform: 'none',
-          borderRadius: 6,
-        },
-      },
-    },
-    // Note: Date/Time picker components are from @mui/x-date-pickers
-    // and need separate styling approach
+    fontFamily: [
+      'Inter',
+      'Roboto',
+      'Helvetica',
+      'Arial',
+      'sans-serif',
+    ].join(','),
   },
 });
 
-export default theme; 
- 
+// Dark theme
+export const darkTheme: Theme = createTheme({
+  palette: {
+    mode: 'dark',
+    primary: {
+      main: '#14b8a6', // teal-500
+    },
+    secondary: {
+      main: '#047857', // emerald-700
+    },
+    background: {
+      default: '#18181b', // zinc-900
+      paper: '#23272f',
+    },
+  },
+  typography: {
+    fontFamily: [
+      'Inter',
+      'Roboto',
+      'Helvetica',
+      'Arial',
+      'sans-serif',
+    ].join(','),
+  },
+});
+
+// Helper to get theme by mode
+export const getTheme = (mode: 'light' | 'dark') => (mode === 'dark' ? darkTheme : lightTheme);
+
+export { lightTheme };

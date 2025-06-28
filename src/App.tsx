@@ -1,16 +1,16 @@
-import React from "react";
+
 import { BrowserRouter } from "react-router-dom";
 import Router from "./router";
-import "./App.css";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import theme from "./theme";
+import { lightTheme } from "./theme";
 
-const App: React.FC = () => {
+const App = () => {
   return (
-    <ThemeProvider theme={theme}>
+    
+    <ThemeProvider theme={lightTheme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <BrowserRouter>

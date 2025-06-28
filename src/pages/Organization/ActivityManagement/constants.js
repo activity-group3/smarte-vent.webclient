@@ -19,4 +19,4 @@ export const SortFields = {
   ACTIVITY_CATEGORY: "activityCategory",
 };
 
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080';

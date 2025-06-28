@@ -1,7 +1,0 @@
-{
-  "name": "my-app",
-  "aliases": {
-    "@/components": "./components",
-    "@/lib": "./lib"
-  }
-}
