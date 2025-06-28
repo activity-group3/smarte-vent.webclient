@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -14,10 +14,87 @@ import {
   FormControl,
   InputLabel,
   TextareaAutosize,
+  SelectChangeEvent,
 } from "@mui/material";
 import { Add as AddIcon, Delete as DeleteIcon } from "@mui/icons-material";
 import "tailwindcss/tailwind.css";
 import MapLocationPicker from "@/components/MapLocationPicker";
+
+// Type definitions
+type ActivityStatus =
+  | "SPENDING"
+  | "IN_PROGRESS"
+  | "ONGOING"
+  | "COMPLETED"
+  | "PUBLISHED"
+  | "CANCELLED";
+type ActivityCategory = "STUDENT_ORGANIZATION" | "UNIVERSITY" | "THIRD_PARTY";
+type ScheduleStatus = "WAITING_TO_START" | "IN_PROGRESS" | "COMPLETED";
+
+interface ActivitySchedule {
+  start_time: string;
+  end_time: string;
+  activity_description: string;
+  status: ScheduleStatus;
+  location: string;
+}
+
+interface FormData {
+  activity_name: string;
+  description: string;
+  start_date: string;
+  end_date: string;
+  activity_venue: string;
+  activity_status: ActivityStatus;
+  capacity_limit: string;
+  activity_type: string;
+  activity_category: ActivityCategory;
+  activity_description: string;
+  activity_image: string;
+  activity_link: string;
+  attendance_score_unit: string;
+  representative_organizer_id: string;
+  short_description: string;
+  tags: string[];
+  current_participants: number;
+  address: string;
+  latitude: string;
+  longitude: string;
+  fee: string;
+  is_featured: boolean;
+  is_approved: boolean;
+  likes: number;
+  registration_deadline: string;
+}
+
+interface FormattedFormData
+  extends Omit<
+    FormData,
+    | "capacity_limit"
+    | "representative_organizer_id"
+    | "current_participants"
+    | "latitude"
+    | "longitude"
+    | "likes"
+  > {
+  capacity_limit: number;
+  representative_organizer_id: number;
+  current_participants: number;
+  latitude: number | null;
+  longitude: number | null;
+  likes: number;
+  activity_schedules: ActivitySchedule[];
+}
+
+interface LocationData {
+  address: string;
+  latitude: number;
+  longitude: number;
+}
+
+interface ApiResponse {
+  message?: string;
+}
 
 // Custom styled components using Material-UI with Tailwind classes
 const StyledTextField = styled(TextField)(({ theme }) => ({
@@ -63,11 +140,11 @@ const StyledTextarea = styled(TextareaAutosize)(({ theme }) => ({
   },
 }));
 
-const CreateActivity = () => {
+const CreateActivity: React.FC = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [schedules, setSchedules] = useState([
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [schedules, setSchedules] = useState<ActivitySchedule[]>([
     {
       start_time: "",
       end_time: "",
@@ -77,7 +154,7 @@ const CreateActivity = () => {
     },
   ]);
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     activity_name: "",
     description: "",
     start_date: "",
@@ -92,7 +169,6 @@ const CreateActivity = () => {
     activity_link: "",
     attendance_score_unit: "",
     representative_organizer_id: "",
-    // Add new fields
     short_description: "",
     tags: [],
     current_participants: 0,
@@ -107,17 +183,17 @@ const CreateActivity = () => {
   });
 
   // Convert datetime-local (e.g., "2025-06-15T09:00") to Instant (e.g., "2025-06-15T09:00:00Z")
-  const toInstant = (datetime) => {
+  const toInstant = (datetime: string): string => {
     if (!datetime) return "";
     return datetime.endsWith("Z") ? datetime : `${datetime}:00Z`;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const formattedFormData = {
+    const formattedFormData: FormattedFormData = {
       ...formData,
       start_date: toInstant(formData.start_date),
       end_date: toInstant(formData.end_date),
@@ -126,10 +202,11 @@ const CreateActivity = () => {
       representative_organizer_id:
         parseInt(formData.representative_organizer_id) || 0,
       attendance_score_unit: formData.attendance_score_unit || "0",
-      current_participants: parseInt(formData.current_participants) || 0,
+      current_participants:
+        parseInt(formData.current_participants.toString()) || 0,
       latitude: parseFloat(formData.latitude) || null,
       longitude: parseFloat(formData.longitude) || null,
-      likes: parseInt(formData.likes) || 0,
+      likes: parseInt(formData.likes.toString()) || 0,
       activity_schedules: schedules.map((schedule) => ({
         ...schedule,
         start_time: toInstant(schedule.start_time),
@@ -148,21 +225,28 @@ const CreateActivity = () => {
         body: JSON.stringify(formattedFormData),
       });
 
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
       if (response.status === 201) {
-        alert('Activity created successfully!');
+        alert("Activity created successfully!");
         navigate("/organization/activities");
       } else {
-        setError(data.message || `Failed to create activity. Status: ${response.status}`);
+        setError(
+          data.message ||
+            `Failed to create activity. Status: ${response.status}`
+        );
       }
     } catch (err) {
-      setError("Network error: " + err.message);
+      const errorMessage =
+        err instanceof Error ? err.message : "Unknown error occurred";
+      setError("Network error: " + errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (
+    e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ): void => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
@@ -170,7 +254,19 @@ const CreateActivity = () => {
     }));
   };
 
-  const handleScheduleChange = (index, field, value) => {
+  const handleSelectChange = (e: SelectChangeEvent<string | boolean>): void => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name as string]: value,
+    }));
+  };
+
+  const handleScheduleChange = (
+    index: number,
+    field: keyof ActivitySchedule,
+    value: string
+  ): void => {
     const newSchedules = [...schedules];
     newSchedules[index] = {
       ...newSchedules[index],
@@ -179,7 +275,7 @@ const CreateActivity = () => {
     setSchedules(newSchedules);
   };
 
-  const addSchedule = () => {
+  const addSchedule = (): void => {
     setSchedules([
       ...schedules,
       {
@@ -192,14 +288,32 @@ const CreateActivity = () => {
     ]);
   };
 
-  const removeSchedule = (index) => {
+  const removeSchedule = (index: number): void => {
     if (schedules.length > 1) {
       setSchedules(schedules.filter((_, i) => i !== index));
     }
   };
 
+  const handleLocationSelect = (locationData: LocationData): void => {
+    setFormData((prev) => ({
+      ...prev,
+      address: locationData.address,
+      latitude: locationData.latitude.toString(),
+      longitude: locationData.longitude.toString(),
+    }));
+  };
+
+  const handleTagsChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const tagsArray = e.target.value.split(",").map((tag) => tag.trim());
+    setFormData((prev) => ({
+      ...prev,
+      tags: tagsArray,
+    }));
+  };
+
   return (
-    <Box className="p-6 bg-gray-50 min-h-screen">
+    // @ts-ignore
+    <Box sx={{ p: 6, bgcolor: "grey.50", minHeight: "100vh" }}>
       <Typography variant="h4" className="text-gray-800 font-bold mb-6">
         Create New Activity
       </Typography>
@@ -273,24 +387,6 @@ const CreateActivity = () => {
           variant="outlined"
         />
 
-        {/* Activity Status */}
-        {/* <FormControl fullWidth>
-          <InputLabel>Status</InputLabel>
-          <StyledSelect
-            name="activity_status"
-            value={formData.activity_status}
-            onChange={handleChange}
-            required
-          >
-            <MenuItem value="IN_PROGRESS">Waiting to Start</MenuItem>
-            <MenuItem value="ONGOING">Ongoing</MenuItem>
-            {/* <MenuItem value="COMPLETED">Completed</MenuItem> */}
-            {/* <MenuItem value="PUBLISHED">PUBLISHED</MenuItem> */}
-            {/* <MenuItem value="CANCELLED">CANCELLED</MenuItem> */}
-
-          {/* </StyledSelect> */}
-        {/* </FormControl> */}
-
         {/* Capacity Limit */}
         <StyledTextField
           fullWidth
@@ -304,27 +400,18 @@ const CreateActivity = () => {
           variant="outlined"
         />
 
-        {/* Activity Type */}
-        {/* <StyledTextField
-          fullWidth
-          label="Activity Type"
-          name="activity_type"
-          value={formData.activity_type}
-          onChange={handleChange}
-          required
-          variant="outlined"
-        /> */}
-
         {/* Activity Category */}
         <FormControl fullWidth>
           <InputLabel>Category</InputLabel>
           <StyledSelect
             name="activity_category"
             value={formData.activity_category}
-            onChange={handleChange}
+            onChange={handleSelectChange}
             required
           >
-            <MenuItem value="STUDENT_ORGANIZATION">Student Organization</MenuItem>
+            <MenuItem value="STUDENT_ORGANIZATION">
+              Student Organization
+            </MenuItem>
             <MenuItem value="UNIVERSITY">University</MenuItem>
             <MenuItem value="THIRD_PARTY">Third Party</MenuItem>
           </StyledSelect>
@@ -377,19 +464,6 @@ const CreateActivity = () => {
           variant="outlined"
         />
 
-        {/* Representative Organizer ID */}
-        {/* <StyledTextField
-          fullWidth
-          label="Organizer ID"
-          type="number"
-          name="representative_organizer_id"
-          value={formData.representative_organizer_id}
-          onChange={handleChange}
-          required
-          inputProps={{ min: 1 }}
-          variant="outlined"
-        /> */}
-
         {/* Short Description */}
         <StyledTextField
           fullWidth
@@ -408,15 +482,7 @@ const CreateActivity = () => {
           label="Tags (comma-separated)"
           name="tags"
           value={formData.tags.join(", ")}
-          onChange={(e) => {
-            const tagsArray = e.target.value
-              .split(",")
-              .map((tag) => tag.trim());
-            setFormData((prev) => ({
-              ...prev,
-              tags: tagsArray,
-            }));
-          }}
+          onChange={handleTagsChange}
           variant="outlined"
           placeholder="e.g. workshop, technology, career"
         />
@@ -426,16 +492,7 @@ const CreateActivity = () => {
           <Typography variant="h6" className="text-gray-800 font-semibold">
             Location Details
           </Typography>
-          <MapLocationPicker
-            onLocationSelect={({ address, latitude, longitude }) => {
-              setFormData((prev) => ({
-                ...prev,
-                address,
-                latitude: latitude.toString(),
-                longitude: longitude.toString(),
-              }));
-            }}
-          />
+          <MapLocationPicker onLocationSelect={handleLocationSelect} />
           <Box className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <StyledTextField
               fullWidth
@@ -501,10 +558,10 @@ const CreateActivity = () => {
             <StyledSelect
               name="is_featured"
               value={formData.is_featured}
-              onChange={handleChange}
+              onChange={handleSelectChange}
             >
-              <MenuItem value={true}>Featured</MenuItem>
-              <MenuItem value={false}>Not Featured</MenuItem>
+              <MenuItem value="true">Featured</MenuItem>
+              <MenuItem value="false">Not Featured</MenuItem>
             </StyledSelect>
           </FormControl>
 
@@ -513,10 +570,10 @@ const CreateActivity = () => {
             <StyledSelect
               name="is_approved"
               value={formData.is_approved}
-              // onChange={handleChange}
+              onChange={handleSelectChange}
             >
-              <MenuItem value={true}>Approved</MenuItem>
-              <MenuItem value={false}>Not Approved</MenuItem>
+              <MenuItem value="true">Approved</MenuItem>
+              <MenuItem value="false">Not Approved</MenuItem>
             </StyledSelect>
           </FormControl>
         </Box>
@@ -596,7 +653,11 @@ const CreateActivity = () => {
                 <StyledSelect
                   value={schedule.status}
                   onChange={(e) =>
-                    handleScheduleChange(index, "status", e.target.value)
+                    handleScheduleChange(
+                      index,
+                      "status",
+                      e.target.value as ScheduleStatus
+                    )
                   }
                   required
                 >

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useMemo } from "react"
+import React, { useEffect, useState, useMemo } from "react"
 import { LocalizationProvider } from "@mui/x-date-pickers"
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns"
 import { DateTimePicker } from "@mui/x-date-pickers"
@@ -8,10 +8,9 @@ import {
   FaUsers,
   FaFilter,
   FaChartLine,
-  FaRegThumbsUp,
-  FaCommentAlt,
+  FaStar,
+  FaTag,
   FaChartBar,
-  FaChartPie,
   FaCalendarAlt,
 } from "react-icons/fa"
 import {
@@ -44,20 +43,74 @@ import { statisticsService } from '../../../services/statisticsService'
 // Import styles
 import './adminDashboard.css'
 
+// Enhanced interface with additional properties based on usage in the component
+interface EnhancedGeneralStatistics {
+  totalActivities: number;
+  totalParticipants: number;
+  totalOrganizations: number;
+  completedActivities: number;
+  pendingActivities: number;
+  activitiesLastWeek?: number;
+  activitiesLastMonth?: number;
+  averageRating?: number;
+  totalReviews?: number;
+  activitiesByCategory?: Record<string, number>;
+  averageRatingsByActivity?: Array<{
+    activityId: string;
+    score: number;
+  }>;
+  topKeywords?: Array<{
+    keyword: string;
+    count: number;
+  }>;
+  [key: string]: any;
+}
+
+interface FilterState {
+  timePeriod: string;
+  activityType: string;
+  status: string;
+  startDate: Date | null;
+  endDate: Date | null;
+}
+
+interface TimePeriod {
+  label: string;
+  value: string;
+}
+
+interface ChartDataItem {
+  name: string;
+  value: number;
+  color: string;
+}
+
+interface RatingDataItem {
+  activityId: string;
+  score: number;
+  fill: string;
+}
+
+interface KeywordDataItem {
+  keyword: string;
+  count: number;
+  fill: string;
+}
+
 /**
  * Admin Dashboard Component
  * Displays statistical data and analytics for administrators
  */
-const AdminDashboard = () => {
+const AdminDashboard: React.FC = () => {
   // State management
-  const [stats, setStats] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const [activeTab, setActiveTab] = useState(0)
-  const [showFilters, setShowFilters] = useState(false)
+  const [stats, setStats] = useState<EnhancedGeneralStatistics | null>(null)
+  const [loading, setLoading] = useState<boolean>(true)
+  const [error, setError] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<number>(0)
+  const [showFilters, setShowFilters] = useState<boolean>(false)
 
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FilterState>({
     timePeriod: '',
     activityType: '',
     status: '',
@@ -66,13 +119,13 @@ const AdminDashboard = () => {
   })
 
   // Constants
-  const COLORS = useMemo(() => [
+  const COLORS = useMemo<string[]>(() => [
     '#0088FE', '#00C49F', '#FFBB28', '#FF8042', 
     '#8884d8', '#82ca9d', '#ffc658', '#ff7300'
   ], [])
 
   // Time period tabs
-  const TIME_PERIODS = useMemo(() => [
+  const TIME_PERIODS = useMemo<TimePeriod[]>(() => [
     { label: 'All Time', value: 'all' },
     { label: 'Daily', value: 'daily' },
     { label: 'Weekly', value: 'weekly' },
@@ -89,7 +142,7 @@ const AdminDashboard = () => {
   /**
    * Fetches the initial statistics data
    */
-  const fetchStatistics = async () => {
+  const fetchStatistics = async (): Promise<void> => {
     setLoading(true)
     try {
       const data = await statisticsService.getStatistics()
@@ -105,19 +158,16 @@ const AdminDashboard = () => {
 
   /**
    * Handles tab change and fetches corresponding statistics
-   * @param {Event} event - The event object
-   * @param {number} newValue - The index of the selected tab
    */
-  const handleTabChange = (event, newValue) => {
+  const handleTabChange = (event: React.SyntheticEvent, newValue: number): void => {
     setActiveTab(newValue)
     fetchTabStats(newValue)
   }
 
   /**
    * Fetches statistics based on selected time period tab
-   * @param {number} tabIndex - The index of the selected tab
    */
-  const fetchTabStats = async (tabIndex) => {
+  const fetchTabStats = async (tabIndex: number): Promise<void> => {
     setLoading(true)
     try {
       const period = TIME_PERIODS[tabIndex].value
@@ -141,10 +191,8 @@ const AdminDashboard = () => {
 
   /**
    * Updates filter state when a filter value changes
-   * @param {string} field - The filter field to update
-   * @param {any} value - The new value for the filter
    */
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = <K extends keyof FilterState>(field: K, value: FilterState[K]): void => {
     setFilters(prev => ({
       ...prev,
       [field]: value
@@ -154,7 +202,7 @@ const AdminDashboard = () => {
   /**
    * Applies selected filters and fetches filtered statistics
    */
-  const applyFilters = async () => {
+  const applyFilters = async (): Promise<void> => {
     setLoading(true)
     try {
       // Convert dates to ISO strings if they exist
@@ -178,7 +226,7 @@ const AdminDashboard = () => {
   /**
    * Resets all filters to default values and fetches unfiltered statistics
    */
-  const resetFilters = () => {
+  const resetFilters = (): void => {
     setFilters({
       timePeriod: '',
       activityType: '',
@@ -191,9 +239,8 @@ const AdminDashboard = () => {
 
   /**
    * Prepares data for the activities by category pie chart
-   * @returns {Array} Formatted data for the pie chart
    */
-  const prepareActivitiesByCategoryData = () => {
+  const prepareActivitiesByCategoryData = (): ChartDataItem[] => {
     if (!stats || !stats.activitiesByCategory) return []
 
     return Object.entries(stats.activitiesByCategory).map(([category, count], index) => ({
@@ -205,9 +252,8 @@ const AdminDashboard = () => {
 
   /**
    * Prepares data for the average ratings by activity bar chart
-   * @returns {Array} Formatted data for the bar chart
    */
-  const prepareRatingData = () => {
+  const prepareRatingData = (): RatingDataItem[] => {
     if (!stats || !stats.averageRatingsByActivity) return []
 
     return stats.averageRatingsByActivity.map((item, index) => ({
@@ -219,9 +265,8 @@ const AdminDashboard = () => {
 
   /**
    * Prepares data for the top keywords horizontal bar chart
-   * @returns {Array} Formatted data for the horizontal bar chart
    */
-  const prepareKeywordsData = () => {
+  const prepareKeywordsData = (): KeywordDataItem[] => {
     if (!stats || !stats.topKeywords) return []
 
     return stats.topKeywords.map((item, index) => ({
@@ -233,26 +278,22 @@ const AdminDashboard = () => {
 
   /**
    * Formats category names for display
-   * @param {string} category - The category name to format
-   * @returns {string} Formatted category name
    */
-  const formatCategoryName = (category) => {
+  const formatCategoryName = (category: string): string => {
     if (!category) return 'Unknown'
 
     // Convert snake_case or camelCase to Title Case With Spaces
     return category
       .replace(/_/g, ' ')
       .replace(/([A-Z])/g, ' $1')
-      .replace(/^./, str => str.toUpperCase())
+      .replace(/^./, (str: string) => str.toUpperCase())
       .trim()
   }
 
   /**
    * Formats a timestamp to a readable date string
-   * @param {string} timestamp - The timestamp to format
-   * @returns {string} Formatted date string
    */
-  const formatDate = (timestamp) => {
+  const formatDate = (timestamp: string): string => {
     if (!timestamp) return ''
     const date = new Date(timestamp)
     return date.toLocaleDateString()
@@ -263,6 +304,7 @@ const AdminDashboard = () => {
       <div className="admin-dashboard min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-6">
         <Container maxWidth="xl">
           {/* Dashboard Header */}
+          {/* @ts-ignore */}
           <Box className="dashboard-header mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
             <div>
               <Typography variant="h4" className="font-bold text-gray-800 mb-2">
@@ -367,7 +409,11 @@ const AdminDashboard = () => {
                     label="Start Date"
                     value={filters.startDate}
                     onChange={(date) => handleFilterChange('startDate', date)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                      },
+                    }}
                   />
                 </Grid>
                 <Grid item xs={12} md={3}>
@@ -375,7 +421,11 @@ const AdminDashboard = () => {
                     label="End Date"
                     value={filters.endDate}
                     onChange={(date) => handleFilterChange('endDate', date)}
-                    renderInput={(params) => <TextField {...params} fullWidth />}
+                    slotProps={{
+                      textField: {
+                        fullWidth: true,
+                      },
+                    }}
                   />
                 </Grid>
                 
@@ -440,7 +490,7 @@ const AdminDashboard = () => {
                       <CardContent>
                         <div className="flex justify-between items-center mb-4">
                           <Typography variant="h6">Total Activities</Typography>
-                          <FaChartLine size={24} />
+                          <FaChartLine style={{ fontSize: '24px' }} />
                         </div>
                         <Typography variant="h3" className="font-bold">
                           {stats.totalActivities || 0}
@@ -458,7 +508,7 @@ const AdminDashboard = () => {
                       <CardContent>
                         <div className="flex justify-between items-center mb-4">
                           <Typography variant="h6">Total Participants</Typography>
-                          <FaUsers size={24} />
+                          <FaUsers style={{ fontSize: '24px' }} />
                         </div>
                         <Typography variant="h3" className="font-bold">
                           {stats.totalParticipants || 0}
@@ -476,7 +526,7 @@ const AdminDashboard = () => {
                       <CardContent>
                         <div className="flex justify-between items-center mb-4">
                           <Typography variant="h6">Average Rating</Typography>
-                          <FaRegThumbsUp size={24} />
+                          <FaStar style={{ fontSize: '24px' }} />
                         </div>
                         <Typography variant="h3" className="font-bold">
                           {(stats.averageRating || 0).toFixed(1)}
@@ -494,13 +544,13 @@ const AdminDashboard = () => {
                       <CardContent>
                         <div className="flex justify-between items-center mb-4">
                           <Typography variant="h6">Top Keywords</Typography>
-                          <FaCommentAlt size={24} />
+                          <FaTag style={{ fontSize: '24px' }} />
                         </div>
                         <Typography variant="h3" className="font-bold">
                           {stats.topKeywords?.length || 0}
                         </Typography>
                         <Typography variant="body2" className="mt-2">
-                          Most popular: {stats.topKeywords?.length > 0 ? stats.topKeywords[0].keyword : 'None'}
+                          Most popular: {(stats.topKeywords?.length ?? 0) > 0 && stats.topKeywords ? stats.topKeywords[0].keyword : 'None'}
                         </Typography>
                       </CardContent>
                     </Card>
@@ -557,7 +607,7 @@ const AdminDashboard = () => {
                             <XAxis dataKey="activityId" tick={{ fontSize: 12 }} />
                             <YAxis domain={[0, 5]} tick={{ fontSize: 12 }} />
                             <RechartsTooltip 
-                              formatter={(value) => [`${value.toFixed(1)}`, 'Average Rating']} 
+                              formatter={(value) => [`${typeof value === 'number' ? value.toFixed(1) : value}`, 'Average Rating']} 
                               cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                             />
                             <Bar 
@@ -621,7 +671,7 @@ const AdminDashboard = () => {
               </section>
 
               {/* Keywords Tag Cloud Section */}
-              {stats.topKeywords?.length > 0 && (
+              {stats.topKeywords && stats.topKeywords.length > 0 && (
                 <section className="keywords-tag-section">
                   <Paper className="tag-cloud p-6 bg-white shadow-md rounded-lg mb-6 hover:shadow-lg transition-shadow">
                     <Typography variant="h6" className="mb-4 font-semibold">

@@ -10,20 +10,75 @@ import {
   FaBuilding,
 } from "react-icons/fa";
 
-const AdminActivityDetail = () => {
-  const { id } = useParams();
+// Type definitions
+interface Organization {
+  organization_name: string;
+  organization_category: string;
+  representative_email: string;
+  representative_phone: string;
+}
+
+interface ActivitySchedule {
+  id: number;
+  activity_description: string;
+  status: "ONGOING" | "COMPLETED" | "CANCELLED" | "PENDING";
+  location: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface Activity {
+  id: number;
+  activity_name: string;
+  short_description: string;
+  description: string;
+  activity_status:
+    | "WAITING_TO_START"
+    | "IN_PROGRESS"
+    | "COMPLETED"
+    | "CANCELLED";
+  is_featured: boolean;
+  organization?: Organization;
+  tags?: string[];
+  activity_venue: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  current_participants: number;
+  capacity_limit: number;
+  fee?: number;
+  start_date: string;
+  end_date: string;
+  registration_deadline: string;
+  activity_schedules?: ActivitySchedule[];
+}
+
+interface ApiResponse {
+  status_code: number;
+  data: Activity;
+}
+
+type ActivityStatus =
+  | "WAITING_TO_START"
+  | "IN_PROGRESS"
+  | "COMPLETED"
+  | "CANCELLED";
+type ScheduleStatus = "ONGOING" | "COMPLETED" | "CANCELLED" | "PENDING";
+
+const AdminActivityDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activity, setActivity] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState(null);
+  const [activity, setActivity] = useState<Activity | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [joining, setJoining] = useState<boolean>(false);
+  const [joinError, setJoinError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchActivityDetail();
   }, [id]);
 
-  const fetchActivityDetail = async () => {
+  const fetchActivityDetail = async (): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(`http://localhost:8080/activities/${id}`, {
@@ -32,7 +87,7 @@ const AdminActivityDetail = () => {
           "Content-Type": "application/json",
         },
       });
-      const data = await response.json();
+      const data: ApiResponse = await response.json();
       if (data.status_code === 200) {
         setActivity(data.data);
       } else {
@@ -45,11 +100,11 @@ const AdminActivityDetail = () => {
     }
   };
 
-  const handleManageParticipant = async () => {
+  const handleManageParticipant = async (): Promise<void> => {
     navigate(`/admin/activities/${id}/participants`);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString("en-US", {
       year: "numeric",
       month: "long",
@@ -59,7 +114,7 @@ const AdminActivityDetail = () => {
     });
   };
 
-  const formatCurrency = (fee) => {
+  const formatCurrency = (fee?: number): string => {
     if (!fee) return "Free";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -67,7 +122,7 @@ const AdminActivityDetail = () => {
     }).format(fee);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: ActivityStatus): string => {
     switch (status) {
       case "WAITING_TO_START":
         return "bg-yellow-100 text-yellow-800";
@@ -82,7 +137,7 @@ const AdminActivityDetail = () => {
     }
   };
 
-  const getScheduleStatusColor = (status) => {
+  const getScheduleStatusColor = (status: ScheduleStatus): string => {
     switch (status) {
       case "ONGOING":
         return "bg-green-100 text-green-800";
@@ -99,12 +154,12 @@ const AdminActivityDetail = () => {
 
   if (loading)
     return (
-      <div className="flex justify-center items-center h-screen">Loading...</div>
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
     );
   if (error)
-    return (
-      <div className="text-red-500 text-center mt-4">{error}</div>
-    );
+    return <div className="text-red-500 text-center mt-4">{error}</div>;
   if (!activity)
     return (
       <div className="text-red-500 text-center mt-4">Activity not found</div>
@@ -127,9 +182,7 @@ const AdminActivityDetail = () => {
               <h1 className="text-3xl font-bold text-gray-800">
                 {activity.activity_name}
               </h1>
-              <p className="text-gray-600 mt-2">
-                {activity.short_description}
-              </p>
+              <p className="text-gray-600 mt-2">{activity.short_description}</p>
             </div>
             <div className="flex flex-col gap-2">
               <span
@@ -173,7 +226,7 @@ const AdminActivityDetail = () => {
             {/* Tags */}
             {activity.tags && activity.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
-                {activity.tags.map((tag, index) => (
+                {activity.tags.map((tag: string, index: number) => (
                   <span
                     key={index}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
@@ -203,7 +256,8 @@ const AdminActivityDetail = () => {
               <div className="flex items-center gap-2">
                 <FaUsers className="text-gray-500" />
                 <span className="text-gray-700">
-                  {activity.current_participants} / {activity.capacity_limit} participants
+                  {activity.current_participants} / {activity.capacity_limit}{" "}
+                  participants
                 </span>
               </div>
 
@@ -220,7 +274,8 @@ const AdminActivityDetail = () => {
                   <div>Start: {formatDate(activity.start_date)}</div>
                   <div>End: {formatDate(activity.end_date)}</div>
                   <div className="text-sm text-red-600">
-                    Registration Deadline: {formatDate(activity.registration_deadline)}
+                    Registration Deadline:{" "}
+                    {formatDate(activity.registration_deadline)}
                   </div>
                 </div>
               </div>
@@ -228,7 +283,9 @@ const AdminActivityDetail = () => {
 
             {/* Keep your existing button section */}
             <div className="mt-6">
-              {joinError && <div className="text-red-500 mb-4">{joinError}</div>}
+              {joinError && (
+                <div className="text-red-500 mb-4">{joinError}</div>
+              )}
               <button
                 className={`px-6 py-2 rounded-md text-white font-medium ${
                   activity.activity_status === "WAITING_TO_START" && !joining
@@ -236,7 +293,9 @@ const AdminActivityDetail = () => {
                     : "bg-gray-400 cursor-not-allowed"
                 }`}
                 onClick={handleManageParticipant}
-                disabled={joining || activity.activity_status !== "WAITING_TO_START"}
+                disabled={
+                  joining || activity.activity_status !== "WAITING_TO_START"
+                }
               >
                 {joining ? "Waiting..." : "Manage Participant"}
               </button>
@@ -250,7 +309,7 @@ const AdminActivityDetail = () => {
             Activity Schedules
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activity.activity_schedules?.map((schedule) => (
+            {activity.activity_schedules?.map((schedule: ActivitySchedule) => (
               <div
                 key={schedule.id}
                 className="bg-white p-4 rounded-lg shadow-sm border border-gray-200"

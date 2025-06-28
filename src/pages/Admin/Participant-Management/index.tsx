@@ -19,23 +19,68 @@ import {
   Pagination,
   Chip,
 } from "@mui/material";
+import type { ChipProps, SelectChangeEvent } from "@mui/material";
 
-const ParticipationStatus = {
+// ------------------------------------------------------------
+// Types & Constants
+// ------------------------------------------------------------
+
+export type ParticipationStatus = "UNVERIFIED" | "VERIFIED" | "REJECTED";
+
+export type ParticipationRole =
+  | "PARTICIPANT"
+  | "CONTRIBUTOR"
+  | "COMMITTEE";
+
+// Data model for a participant (adjust field names if the API differs)
+export interface Participant {
+  id: number;
+  identify_code?: string;
+  participant_name: string;
+  activity_venue: string;
+  start_date: string;
+  end_date: string;
+  registration_time: string;
+  participation_status: ParticipationStatus;
+  participation_role: ParticipationRole;
+}
+
+export const ParticipationStatusConst: Record<
+  ParticipationStatus,
+  ParticipationStatus
+> = {
   UNVERIFIED: "UNVERIFIED",
   VERIFIED: "VERIFIED",
   REJECTED: "REJECTED",
 };
 
-const ParticipationRole = {
+export const ParticipationStatusArray: ParticipationStatus[] = [
+  "UNVERIFIED",
+  "VERIFIED",
+  "REJECTED",
+];
+
+export const ParticipationRoleConst: Record<ParticipationRole, ParticipationRole> = {
   PARTICIPANT: "PARTICIPANT",
   CONTRIBUTOR: "CONTRIBUTOR",
+  COMMITTEE: "COMMITTEE",
 };
 
-const SortFields = {
+export const ParticipationRoleArray: ParticipationRole[] = [
+  "PARTICIPANT",
+  "CONTRIBUTOR",
+  "COMMITTEE",
+];
+
+export const SortFields = {
   REGISTRATION_TIME: "registeredAt",
-};
+  ID: "id",
+  IDENTIFY_CODE: "identifyCode",
+} as const;
+// Values of SortFields ("registeredAt" | "id" | "identifyCode")
+export type SortField = (typeof SortFields)[keyof typeof SortFields];
 
-const getStatusColor = (status) => {
+const getStatusColor = (status: ParticipationStatus): ChipProps["color"] => {
   switch (status) {
     case "VERIFIED":
       return "success";
@@ -48,7 +93,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const getRoleColor = (role) => {
+const getRoleColor = (role: ParticipationRole): ChipProps["color"] => {
   switch (role) {
     case "COMMITTEE":
       return "primary";
@@ -59,25 +104,34 @@ const getRoleColor = (role) => {
   }
 };
 
-const AdminParticipantManage = () => {
+type FilterChangeEvent =
+  | SelectChangeEvent
+  | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>;
+
+const AdminParticipantManage: React.FC = () => {
   const { id } = useParams();
-  const [participants, setParticipants] = useState([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Record<string, string>>({
     participationStatus: "",
     participationRole: "",
     registeredAfter: "",
     registeredBefore: "",
-    studentCode: "", // Add this line
-    participantName: "", // Add this line
+    studentCode: "",
+    participantName: "",
   });
-  const [sorting, setSorting] = useState({
+  const [sorting, setSorting] = useState<{
+    field: (typeof SortFields)[keyof typeof SortFields];
+    direction: "asc" | "desc";
+  }>({
     field: SortFields.REGISTRATION_TIME,
     direction: "desc",
   });
 
-  const handleSortChange = (field) => {
+  const handleSortChange = (
+    field: (typeof SortFields)[keyof typeof SortFields]
+  ) => {
     setSorting((prev) => ({
       field,
       direction:
@@ -143,19 +197,21 @@ const AdminParticipantManage = () => {
     console.log(participants);
   }, [id, page, filters, sorting]);
 
-  const handlePageChange = (event, value) => {
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
     setPage(value - 1);
   };
 
-  const handleFilterChange = (field) => (event) => {
-    setFilters((prev) => ({
-      ...prev,
-      [field]: event.target.value,
-    }));
-    setPage(0);
-  };
+  const handleFilterChange = (field: keyof typeof filters) =>
+    (event: FilterChangeEvent) => {
+      const value = (event.target as HTMLInputElement).value as string;
+      setFilters((prev) => ({
+        ...prev,
+        [field]: value,
+      }) as typeof filters);
+      setPage(0);
+    };
 
-  const handleVerify = async (participantId) => {
+  const handleVerify = async (participantId: number) => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
@@ -174,11 +230,11 @@ const AdminParticipantManage = () => {
       }
 
       // Update the local state to reflect the change
-      setParticipants(
-        participants.map((participant) =>
-          participant.id === participantId
-            ? { ...participant, participation_status: "VERIFIED" }
-            : participant
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === participantId
+            ? ({ ...p, participation_status: "VERIFIED" } as Participant)
+            : p
         )
       );
     } catch (error) {
@@ -186,7 +242,7 @@ const AdminParticipantManage = () => {
     }
   };
 
-  const handleRemove = async (participantId) => {
+  const handleRemove = async (participantId: number) => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
@@ -212,7 +268,11 @@ const AdminParticipantManage = () => {
   };
 
   // Add this action button cell component
-  const ActionButtons = ({ participant, onVerify, onRemove }) => {
+  const ActionButtons: React.FC<{
+    participant: Participant;
+    onVerify: (id: number) => void;
+    onRemove: (id: number) => void;
+  }> = ({ participant, onVerify, onRemove }) => {
     switch (participant.participation_status) {
       case "UNVERIFIED":
         return (
@@ -272,6 +332,7 @@ const AdminParticipantManage = () => {
   };
 
   return (
+    
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Participant Management
@@ -286,7 +347,7 @@ const AdminParticipantManage = () => {
             placeholder="Status"
           >
             <MenuItem value="">All Status</MenuItem>
-            {Object.values(ParticipationStatus).map((status) => (
+            {ParticipationStatusArray.map((status) => (
               <MenuItem key={status} value={status}>
                 {status}
               </MenuItem>
@@ -301,7 +362,7 @@ const AdminParticipantManage = () => {
             displayEmpty
           >
             <MenuItem value="">All Roles</MenuItem>
-            {Object.values(ParticipationRole).map((role) => (
+            {ParticipationRoleArray.map((role) => (
               <MenuItem key={role} value={role}>
                 {role}
               </MenuItem>
@@ -344,7 +405,7 @@ const AdminParticipantManage = () => {
         <FormControl sx={{ minWidth: 200 }}>
           <Select
             value={sorting.field}
-            onChange={(e) => handleSortChange(e.target.value)}
+            onChange={(e) => handleSortChange(e.target.value as SortField)}
             displayEmpty
           >
             <MenuItem value={SortFields.REGISTRATION_TIME}>
