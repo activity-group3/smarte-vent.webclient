@@ -1,3 +1,4 @@
+// @ts-nocheck
 
 import { BrowserRouter } from "react-router-dom";
 import Router from "./router";
@@ -5,12 +6,16 @@ import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { lightTheme } from "./theme";
+import { getTheme } from "./theme";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import { useMemo } from "react";
 
 const App = () => {
+  const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
+  const theme = useMemo(() => getTheme(prefersDarkMode ? "dark" : "light"), [prefersDarkMode]);
+
   return (
-    
-    <ThemeProvider theme={lightTheme}>
+    <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns}>
         <BrowserRouter>

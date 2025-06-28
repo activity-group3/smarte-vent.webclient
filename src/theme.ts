@@ -1,60 +1,49 @@
-import { createTheme, Theme } from '@mui/material/styles';
+import { createTheme, ThemeOptions } from '@mui/material/styles';
 
 // Centralized MUI theme configuration
 // Adjust the palette, typography, and other options as needed
 
-// Light theme
-const lightTheme: Theme = createTheme({
+// Design tokens generator – extend this for future palettes / typography needs
+const getDesignTokens = (mode: 'light' | 'dark'): ThemeOptions => ({
   palette: {
-    mode: 'light',
-    primary: {
-      main: '#047857', // emerald-700
-    },
-    secondary: {
-      main: '#14b8a6', // teal-500
-    },
-    background: {
-      default: '#f0fdf4', // green-50
-    },
+    mode,
+    ...(mode === 'light'
+      ? {
+          primary: { main: '#047857' }, // emerald-700
+          secondary: { main: '#14b8a6' }, // teal-500
+          background: { default: '#f0fdf4', paper: '#ffffff' }, // green-50
+        }
+      : {
+          primary: { main: '#14b8a6' }, // teal-500
+          secondary: { main: '#047857' }, // emerald-700
+          background: { default: '#18181b', paper: '#23272f' }, // zinc-900
+        }),
   },
   typography: {
-    fontFamily: [
-      'Inter',
-      'Roboto',
-      'Helvetica',
-      'Arial',
-      'sans-serif',
-    ].join(','),
+    fontFamily: ['Inter', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'].join(','),
+    // Heading defaults – tweak freely for a more "university" feeling
+    h1: { fontWeight: 700, fontSize: '2.25rem' },
+    h2: { fontWeight: 700, fontSize: '1.875rem' },
+    h3: { fontWeight: 600, fontSize: '1.5rem' },
+  },
+  shape: {
+    borderRadius: 8,
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+          textTransform: 'none',
+        },
+      },
+    },
   },
 });
 
-// Dark theme
-export const darkTheme: Theme = createTheme({
-  palette: {
-    mode: 'dark',
-    primary: {
-      main: '#14b8a6', // teal-500
-    },
-    secondary: {
-      main: '#047857', // emerald-700
-    },
-    background: {
-      default: '#18181b', // zinc-900
-      paper: '#23272f',
-    },
-  },
-  typography: {
-    fontFamily: [
-      'Inter',
-      'Roboto',
-      'Helvetica',
-      'Arial',
-      'sans-serif',
-    ].join(','),
-  },
-});
+// Public helpers -------------------------------------------------------------
+export const getTheme = (mode: 'light' | 'dark') => createTheme(getDesignTokens(mode));
 
-// Helper to get theme by mode
-export const getTheme = (mode: 'light' | 'dark') => (mode === 'dark' ? darkTheme : lightTheme);
-
-export { lightTheme };
+// Ready-made themes (useful for tests or static rendering)
+export const lightTheme = getTheme('light');
+export const darkTheme = getTheme('dark');

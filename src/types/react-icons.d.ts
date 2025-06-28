@@ -26,4 +26,26 @@ declare module 'react-icons/fa' {
   export const FaGraduationCap: IconType;
   export const FaHistory: IconType;
   export const FaStar: IconType;
+  export const FaArrowLeft: IconType;
+  export const FaClock: IconType;
+  export const FaMapMarkerAlt: IconType;
+  export const FaUserTie: IconType;
+  export const FaCalendarAlt: IconType;
+  export const FaCalendarTimes: IconType;
+  export const FaRegClock: IconType;
+  export const FaMoneyBillWave: IconType;
+  export const FaRegCalendarAlt: IconType;
+  export const FaRegUser: IconType;
+  export const FaRegBuilding: IconType;
+  export const FaClipboardList: IconType;
+  export const FaChevronLeft: IconType;
+  export const FaChevronRight: IconType;
+  export const FaQuoteLeft: IconType;
+  export const FaQuoteRight: IconType;
+  export const FaTag: IconType;
+  export const FaDollarSign: IconType;
+  export const FaMapMarkedAlt: IconType;
+  export const FaSearch: IconType;
+  export const FaFilter: IconType;
+  export const FaChartLine: IconType;
 } 

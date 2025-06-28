@@ -40,7 +40,6 @@ const OrganizationLayout: React.FC = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
   const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
@@ -73,7 +72,6 @@ const OrganizationLayout: React.FC = () => {
     navigate("/auth/login");
   };
 
-  const toggleSidebar = (): void => setIsCollapsed(!isCollapsed);
   const toggleMobileSidebar = (): void => setIsMobileOpen(!isMobileOpen);
   const toggleProfileMenu = (): void => setProfileMenuOpen(!profileMenuOpen);
 
@@ -174,26 +172,20 @@ const OrganizationLayout: React.FC = () => {
         <aside
           className={`${isMobileOpen ? "translate-x-0" : "-translate-x-full"} 
             md:translate-x-0 fixed md:relative z-50 transition-all duration-300 
-            ${isCollapsed ? "w-20" : "w-64"} bg-white dark:bg-slate-800 shadow-lg`}
+            w-64 h-screen bg-white dark:bg-slate-800 shadow-lg flex-none`}
         >
           <div className="flex flex-col h-full">
             {/* Profile Section */}
             <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <div>
-                <h2 className={`text-xl font-bold text-gray-800 dark:text-white ${isCollapsed ? "hidden" : "block"}`}>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   <FaBuilding className="inline-block mr-2" />
                   Organization
                 </h2>
-                <p className={`text-sm text-gray-600 dark:text-gray-300 mt-1 ${isCollapsed ? "hidden" : "block"}`}>
+                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                   {user?.organization_name || "Organization Name"}
                 </p>
               </div>
-              <button
-                onClick={toggleSidebar}
-                className="hidden md:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
-              >
-                {isCollapsed ? <FaBars className="w-5 h-5" /> : <FaTimes className="w-5 h-5" />}
-              </button>
             </div>
 
             {/* Navigation */}
@@ -213,7 +205,7 @@ const OrganizationLayout: React.FC = () => {
                       }
                     >
                       <span className="text-lg">{item.icon}</span>
-                      {!isCollapsed && <span className="ml-3">{item.label}</span>}
+                      <span className="ml-3">{item.label}</span>
                     </NavLink>
                   </li>
                 ))}
@@ -228,7 +220,7 @@ const OrganizationLayout: React.FC = () => {
                   className="flex items-center w-full px-4 py-2 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
                 >
                   <FaSignOutAlt className="w-5 h-5" />
-                  {!isCollapsed && <span className="ml-5">Logout</span>}
+                  <span className="ml-5">Logout</span>
                 </button>
                 <button
                   onClick={() => setTheme(theme === "light" ? "dark" : "light")}
@@ -239,11 +231,9 @@ const OrganizationLayout: React.FC = () => {
                   ) : (
                     <FaSun className="w-5 h-5" />
                   )}
-                  {!isCollapsed && (
-                    <span className="ml-5">
-                      {theme === "light" ? "Dark Mode" : "Light Mode"}
-                    </span>
-                  )}
+                  <span className="ml-5">
+                    {theme === "light" ? "Dark Mode" : "Light Mode"}
+                  </span>
                 </button>
               </div>
             </div>
@@ -251,7 +241,7 @@ const OrganizationLayout: React.FC = () => {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6 mt-16 md:mt-0">
+        <main className="flex-1 h-screen overflow-y-auto overflow-x-hidden mt-16 md:mt-0">
           <div className="md:hidden flex items-center justify-between pb-4">
             <h1 className="text-xl font-bold text-gray-800 dark:text-white">Organization</h1>
             <div className="flex items-center space-x-3">
@@ -292,7 +282,11 @@ const OrganizationLayout: React.FC = () => {
               )}
             </div>
           </div>
-          <Outlet />
+          <div className="p-6 w-full max-w-full">
+            <div className="w-full max-w-full break-words">
+              <Outlet />
+            </div>
+          </div>
         </main>
       </div>
 

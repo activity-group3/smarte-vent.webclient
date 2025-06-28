@@ -45,7 +45,6 @@ const StudentLayout: React.FC = () => {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [theme, setTheme] = useState<"light" | "dark">("light");
-  const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState<boolean>(false);
   const [accountModalOpen, setAccountModalOpen] = useState<boolean>(false);
@@ -86,7 +85,6 @@ const StudentLayout: React.FC = () => {
     navigate("/auth/login");
   };
 
-  const toggleSidebar = (): void => setIsCollapsed(!isCollapsed);
   const toggleMobileSidebar = (): void => setIsMobileOpen(!isMobileOpen);
   const toggleProfileMenu = (): void => setProfileMenuOpen(!profileMenuOpen);
   const toggleTheme = (): void => setTheme(theme === "light" ? "dark" : "light");
@@ -119,7 +117,7 @@ const StudentLayout: React.FC = () => {
   ];
 
   return (
-    <div className="dashboard">
+    <div className="flex h-screen overflow-hidden">
       {/* Mobile menu button */}
       <button
         onClick={toggleMobileSidebar}
@@ -191,38 +189,25 @@ const StudentLayout: React.FC = () => {
 
       {/* Sidebar */}
       <aside
-        className={`${isMobileOpen ? "translate-x-0" : "-translate-x-full"
-          } 
-        md:translate-x-0 fixed md:relative z-50 transition-all duration-300 
-        ${isCollapsed ? "w-20" : "w-64"} bg-white dark:bg-slate-800 shadow-lg`}
+        className={`${isMobileOpen ? "translate-x-0" : "-translate-x-full"}
+        md:translate-x-0 fixed md:relative z-50 transition-all duration-300
+        w-64 h-screen bg-white dark:bg-slate-800 shadow-lg flex-none`}
       >
         <div className="flex flex-col h-full">
           {/* Profile Section */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div>
               <h2
-                className={`text-xl font-bold text-gray-800 dark:text-white ${isCollapsed ? "hidden" : "block"
-                  }`}
+                className="text-xl font-bold text-gray-800 dark:text-white"
               >
                 Student Portal
               </h2>
               <p
-                className={`text-sm text-gray-600 dark:text-gray-300 mt-1 ${isCollapsed ? "hidden" : "block"
-                  }`}
+                className="text-sm text-gray-600 dark:text-gray-300 mt-1"
               >
                 {user?.name || "Student"}
               </p>
             </div>
-            <button
-              onClick={toggleSidebar}
-              className="hidden md:block text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white"
-            >
-              {isCollapsed ? (
-                <FaBars className="w-5 h-5" />
-              ) : (
-                <FaTimes className="w-5 h-5" />
-              )}
-            </button>
           </div>
 
           {/* Navigation */}
@@ -235,8 +220,7 @@ const StudentLayout: React.FC = () => {
                       to={item.path}
                       end={item.exact}
                       className={({ isActive: isNavActive }) =>
-                        `nav-link flex items-center rounded-lg transition-all duration-200 ${isCollapsed ? 'px-3 py-3 justify-center' : 'px-4 py-3'
-                        } ${isNavActive
+                        `nav-link flex items-center rounded-lg transition-all duration-200 px-4 py-3 ${isNavActive
                           ? "nav-item-active bg-blue-500 text-white shadow-md"
                           : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
                         }`
@@ -248,9 +232,7 @@ const StudentLayout: React.FC = () => {
                       }}
                     >
                       <span className="text-lg">{item.icon}</span>
-                      {!isCollapsed && (
-                        <span className="nav-text ml-3 font-medium">{item.label}</span>
-                      )}
+                      <span className="nav-text ml-3 font-medium">{item.label}</span>
                     </NavLink>
                   </li>
                 );
@@ -266,7 +248,7 @@ const StudentLayout: React.FC = () => {
                 className="flex items-center w-full px-4 py-2 text-red-600 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
               >
                 <FaSignOutAlt className="w-5 h-5" />
-                {!isCollapsed && <span className="ml-5">Logout</span>}
+                <span className="ml-5">Logout</span>
               </button>
               <button
                 onClick={toggleTheme}
@@ -277,11 +259,9 @@ const StudentLayout: React.FC = () => {
                 ) : (
                   <FaSun className="w-5 h-5" />
                 )}
-                {!isCollapsed && (
-                  <span className="ml-5">
-                    {theme === "light" ? "Dark Mode" : "Light Mode"}
-                  </span>
-                )}
+                <span className="ml-5">
+                  {theme === "light" ? "Dark Mode" : "Light Mode"}
+                </span>
               </button>
             </div>
           </div>
@@ -290,11 +270,12 @@ const StudentLayout: React.FC = () => {
 
       {/* Main Content */}
       <main
-        className={`flex-1 pt-16 md:pt-0 md:pl-${isCollapsed ? "20" : "64"
-          } transition-all duration-300 overflow-y-auto`}
+        className="flex-1 h-screen pt-16 md:pt-0 overflow-y-auto overflow-x-hidden"
       >
-        <div className="p-6">
-          <Outlet />
+        <div className="p-6 w-full max-w-full">
+          <div className="w-full max-w-full break-words">
+            <Outlet />
+          </div>
         </div>
       </main>
 

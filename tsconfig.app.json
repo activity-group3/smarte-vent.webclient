@@ -19,6 +19,12 @@
       ],
       "@components": [
         "./src/components"
+      ],
+      "@/lib/*": [
+        "./src/lib/*"
+      ],
+      "@/lib/utils": [
+        "./src/lib/utils"
       ]
     },
     /* Bundler mode */
