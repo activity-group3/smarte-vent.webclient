@@ -22,21 +22,97 @@ import DataTable from '../../../components/charts/DataTable';
 // Import service
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
 
-const Dashboard = () => {
-  const { organizationId } = useParams();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [timePeriod, setTimePeriod] = useState('weekly');
+// Type definitions
+interface OrganizationStats {
+  organizationName: string;
+  organizationType: string;
+  totalActivities: number;
+  totalParticipants: number;
+  participationRate: number;
+  averageFeedbackRating: number;
+  upcomingActivities: number;
+  inProgressActivities: number;
+  completedActivities: number;
+  canceledActivities: number;
+  activitiesByCategory: Record<string, number>;
+  activitiesByMonth: Record<string, number>;
+  participantsByMonth: Record<string, number>;
+  topActivities: TopActivity[];
+  bestRatedActivities?: BestRatedActivity[];
+}
+
+interface TopActivity {
+  activityId: number;
+  activityName: string;
+  currentParticipants: number;
+  category: string;
+  status: string;
+}
+
+interface BestRatedActivity {
+  activityId: number;
+  activityName: string;
+  averageRating: number;
+  feedbackCount: number;
+  category: string;
+}
+
+interface ChartDataItem {
+  name: string;
+  value: number;
+}
+
+interface MonthlyDataItem {
+  name: string;
+  activities: number;
+  participants: number;
+}
+
+interface TopActivityTableItem {
+  id: number;
+  name: string;
+  participants: number;
+  category: string;
+  status: string;
+}
+
+interface BestRatedTableItem {
+  id: number;
+  name: string;
+  rating: number;
+  feedbacks: number;
+  category: string;
+}
+
+interface TableColumn {
+  id: string;
+  label: string;
+  align?: 'left' | 'right' | 'center';
+}
+
+type TimePeriod = 'all' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+
+interface LineChartLine {
+  dataKey: string;
+  name: string;
+  color: string;
+}
+
+const Dashboard: React.FC = () => {
+  const { organizationId } = useParams<{ organizationId: string }>();
+  const [stats, setStats] = useState<OrganizationStats | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [timePeriod, setTimePeriod] = useState<TimePeriod>('weekly');
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchData = async (): Promise<void> => {
       setLoading(true);
       try {
         // Default to an organization ID if not provided in the URL
-        const orgId = organizationId || 1;
+        const orgId = organizationId ? parseInt(organizationId, 10) : 1;
         
-        let data;
+        let data: OrganizationStats;
         if (timePeriod === 'all') {
           data = await organizationStatisticsService.getOrganizationStatistics(orgId);
         } else {
@@ -57,7 +133,7 @@ const Dashboard = () => {
   }, [organizationId, timePeriod]);
 
   // Format data for charts
-  const prepareActivityStatusData = () => {
+  const prepareActivityStatusData = (): ChartDataItem[] => {
     if (!stats) return [];
     
     return [
@@ -68,7 +144,7 @@ const Dashboard = () => {
     ];
   };
 
-  const prepareCategoryData = () => {
+  const prepareCategoryData = (): ChartDataItem[] => {
     if (!stats || !stats.activitiesByCategory) return [];
     
     return Object.entries(stats.activitiesByCategory).map(([category, count]) => ({
@@ -77,7 +153,7 @@ const Dashboard = () => {
     }));
   };
 
-  const prepareMonthlyData = () => {
+  const prepareMonthlyData = (): MonthlyDataItem[] => {
     if (!stats || !stats.activitiesByMonth) return [];
     
     return Object.entries(stats.activitiesByMonth).map(([month, count]) => ({
@@ -87,22 +163,22 @@ const Dashboard = () => {
     }));
   };
 
-  const prepareTopActivitiesData = () => {
+  const prepareTopActivitiesData = (): TopActivityTableItem[] => {
     if (!stats || !stats.topActivities) return [];
     
-    return stats.topActivities.map(activity => ({
+    return stats.topActivities.map((activity: TopActivity) => ({
       id: activity.activityId,
       name: activity.activityName,
-      participants: activity.participantCount,
+      participants: activity.currentParticipants,
       category: activity.category,
       status: activity.status
     }));
   };
 
-  const prepareBestRatedActivitiesData = () => {
+  const prepareBestRatedActivitiesData = (): BestRatedTableItem[] => {
     if (!stats || !stats.bestRatedActivities) return [];
     
-    return stats.bestRatedActivities.map(activity => ({
+    return stats.bestRatedActivities.map((activity: BestRatedActivity) => ({
       id: activity.activityId,
       name: activity.activityName,
       rating: activity.averageRating,
@@ -112,18 +188,27 @@ const Dashboard = () => {
   };
 
   // Column definitions for tables
-  const topActivitiesColumns = [
+  const topActivitiesColumns: TableColumn[] = [
     { id: 'name', label: 'Activity Name' },
     { id: 'participants', label: 'Participants', align: 'right' },
     { id: 'category', label: 'Category' },
     { id: 'status', label: 'Status' }
   ];
 
-  const bestRatedColumns = [
+  const bestRatedColumns: TableColumn[] = [
     { id: 'name', label: 'Activity Name' },
     { id: 'rating', label: 'Rating', align: 'center' },
     { id: 'feedbacks', label: 'Feedback Count', align: 'right' },
     { id: 'category', label: 'Category' }
+  ];
+
+  const handleTimePeriodChange = (period: TimePeriod): void => {
+    setTimePeriod(period);
+  };
+
+  const lineChartLines: LineChartLine[] = [
+    { dataKey: 'activities', name: 'Activities', color: '#8884d8' },
+    { dataKey: 'participants', name: 'Participants', color: '#82ca9d' }
   ];
 
   return (
@@ -133,6 +218,7 @@ const Dashboard = () => {
       </Typography>
       
       {loading ? (
+        // @ts-ignore
         <Box display="flex" justifyContent="center" my={4}>
           <CircularProgress />
         </Box>
@@ -140,43 +226,43 @@ const Dashboard = () => {
         <Paper sx={{ p: 3, bgcolor: 'error.light' }}>
           <Typography color="error">{error}</Typography>
         </Paper>
-      ) : (
+      ) : stats ? (
         <>
           {/* Time period selector */}
           <Box mb={3} display="flex" flexWrap="wrap" gap={1}>
             <Button 
               variant={timePeriod === 'all' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('all')}
+              onClick={() => handleTimePeriodChange('all')}
             >
               All Time
             </Button>
             <Button 
               variant={timePeriod === 'daily' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('daily')}
+              onClick={() => handleTimePeriodChange('daily')}
             >
               Daily
             </Button>
             <Button 
               variant={timePeriod === 'weekly' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('weekly')}
+              onClick={() => handleTimePeriodChange('weekly')}
             >
               Weekly
             </Button>
             <Button 
               variant={timePeriod === 'monthly' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('monthly')}
+              onClick={() => handleTimePeriodChange('monthly')}
             >
               Monthly
             </Button>
             <Button 
               variant={timePeriod === 'quarterly' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('quarterly')}
+              onClick={() => handleTimePeriodChange('quarterly')}
             >
               Quarterly
             </Button>
             <Button 
               variant={timePeriod === 'yearly' ? 'contained' : 'outlined'} 
-              onClick={() => setTimePeriod('yearly')}
+              onClick={() => handleTimePeriodChange('yearly')}
             >
               Yearly
             </Button>
@@ -254,10 +340,7 @@ const Dashboard = () => {
                   data={prepareMonthlyData()} 
                   title="Activities and Participants Over Time" 
                   xAxisDataKey="name"
-                  lines={[
-                    { dataKey: 'activities', name: 'Activities', color: '#8884d8' },
-                    { dataKey: 'participants', name: 'Participants', color: '#82ca9d' }
-                  ]}
+                  lines={lineChartLines}
                 />
               </Paper>
             </Grid>
@@ -285,7 +368,7 @@ const Dashboard = () => {
             </Grid>
           </Grid>
         </>
-      )}
+      ) : null}
     </Container>
   );
 };

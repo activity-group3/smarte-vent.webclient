@@ -1,5 +1,5 @@
 import axios, { AxiosResponse } from "axios";
-import { snakeToCamel, camelToSnake } from "../utils/caseConverter";
+import { snakeToCamel, camelToSnake } from "../utils/caseConverter.ts";
 
 const API_URL = import.meta.env.VITE_API_URL;
 

@@ -11,6 +11,7 @@ import {
   Typography,
   Alert,
   CircularProgress,
+  SelectChangeEvent,
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
 
@@ -64,7 +65,7 @@ const OrganizationInformation: React.FC = () => {
     }
   };
 
-  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | ChangeEvent<{ name?: string; value: unknown }>) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement> | SelectChangeEvent<string> | ChangeEvent<{ name?: string; value: unknown }>) => {
     const { name, value } = e.target as HTMLInputElement;
     setOrganizationInfo((prev) => ({
       ...prev,
@@ -101,6 +102,7 @@ const OrganizationInformation: React.FC = () => {
 
   if (loading) {
     return (
+      // @ts-ignore
       <Box className="flex justify-center items-center h-screen">
         <CircularProgress />
       </Box>

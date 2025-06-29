@@ -6,7 +6,7 @@ interface OrganizationCreateActivityProps {
 }
 
 const OrganizationCreateActivity: React.FC<OrganizationCreateActivityProps> = () => {
-  return <CreateActivity userRole="ORGANIZATION" />;
+  return <CreateActivity />;
 };
 
 export default OrganizationCreateActivity; 

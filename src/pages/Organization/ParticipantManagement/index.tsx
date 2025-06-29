@@ -27,6 +27,7 @@ import {
   DialogContent,
   DialogActions,
   Rating,
+  SelectChangeEvent,
 } from "@mui/material";
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
@@ -37,39 +38,119 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-import debounce from 'lodash/debounce';
+
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 // Fix for default marker icon
-delete L.Icon.Default.prototype._getIconUrl;
+delete (L.Icon.Default.prototype as any)._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: markerIcon2x,
   iconUrl: markerIcon,
   shadowUrl: markerShadow,
 });
 
-const ParticipationStatus = {
-  UNVERIFIED: "UNVERIFIED",
-  VERIFIED: "VERIFIED",
-  REJECTED: "REJECTED",
-};
+enum ParticipationStatus {
+  UNVERIFIED = "UNVERIFIED",
+  VERIFIED = "VERIFIED",
+  REJECTED = "REJECTED",
+}
 
-const ParticipationRole = {
-  PARTICIPANT: "PARTICIPANT",
-  CONTRIBUTOR: "CONTRIBUTOR",
-};
+enum ParticipationRole {
+  PARTICIPANT = "PARTICIPANT",
+  CONTRIBUTOR = "CONTRIBUTOR",
+}
 
-const SortFields = {
-  REGISTRATION_TIME: "registeredAt",
-  IDENTIFY_CODE: "identifyCode",
-  PARTICIPANT_NAME: "participantName",
-  START_DATE: "startDate",
-  END_DATE: "endDate",
-};
+enum SortFields {
+  REGISTRATION_TIME = "registeredAt",
+  IDENTIFY_CODE = "identifyCode",
+  PARTICIPANT_NAME = "participantName",
+  START_DATE = "startDate",
+  END_DATE = "endDate",
+}
 
-const getStatusColor = (status) => {
+type SortDirection = "asc" | "desc";
+
+interface Participant {
+  id: number;
+  identify_code: string;
+  participant_name: string;
+  start_date: string;
+  end_date: string;
+  registration_time: string;
+  participation_status: ParticipationStatus;
+  participation_role: ParticipationRole;
+  processed_at?: string;
+  processed_by?: string;
+  rejection_reason?: string;
+  verified_note?: string;
+}
+
+interface Filters {
+  participationStatus: string;
+  participationRole: string;
+  registeredAfter: string;
+  registeredBefore: string;
+  identifyCode: string;
+  participantName: string;
+}
+
+interface Sorting {
+  field: SortFields;
+  direction: SortDirection;
+}
+
+interface VerificationModal {
+  open: boolean;
+  participantId: number | null;
+  status: ParticipationStatus | null;
+  rejection_reason: string;
+  verified_note: string;
+}
+
+interface DetailLogModal {
+  open: boolean;
+  participant: Participant | null;
+  loading: boolean;
+  error: string | null;
+}
+
+interface ActivityDetails {
+  id: number;
+  name: string;
+  category: string;
+  venue: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+}
+
+interface Feedback {
+  id: number;
+  rating: number;
+  comment: string;
+  participant_name: string;
+  created_at: string;
+}
+
+interface ApiResponse<T> {
+  status_code: number;
+  data: T;
+}
+
+interface ParticipantsResponse {
+  results: Participant[];
+  total_pages: number;
+}
+
+interface ActionButtonsProps {
+  participant: Participant;
+  onVerify: (participantId: number, status: ParticipationStatus) => void;
+  onRemove: (participantId: number) => void;
+}
+
+const getStatusColor = (status: string): "success" | "warning" | "error" | "default" => {
   switch (status) {
     case "VERIFIED":
       return "success";
@@ -82,7 +163,7 @@ const getStatusColor = (status) => {
   }
 };
 
-const getRoleColor = (role) => {
+const getRoleColor = (role: string): "primary" | "info" | "default" => {
   switch (role) {
     case "COMMITTEE":
       return "primary";
@@ -93,12 +174,12 @@ const getRoleColor = (role) => {
   }
 };
 
-const OrganizationParticipantManagement = () => {
-  const { id } = useParams();
-  const [participants, setParticipants] = useState([]);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState({
+const OrganizationParticipantManagement: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [participants, setParticipants] = useState<Participant[]>([]);
+  const [page, setPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [filters, setFilters] = useState<Filters>({
     participationStatus: "",
     participationRole: "",
     registeredAfter: "",
@@ -106,36 +187,36 @@ const OrganizationParticipantManagement = () => {
     identifyCode: "",
     participantName: "",
   });
-  const [sorting, setSorting] = useState({
+  const [sorting, setSorting] = useState<Sorting>({
     field: SortFields.REGISTRATION_TIME,
     direction: "desc",
   });
-  const [verificationModal, setVerificationModal] = useState({
+  const [verificationModal, setVerificationModal] = useState<VerificationModal>({
     open: false,
     participantId: null,
     status: null,
     rejection_reason: "",
     verified_note: "",
   });
-  const [detailLogModal, setDetailLogModal] = useState({
+  const [detailLogModal, setDetailLogModal] = useState<DetailLogModal>({
     open: false,
     participant: null,
     loading: false,
     error: null,
   });
-  const [activityDetails, setActivityDetails] = useState(null);
-  const [feedbacks, setFeedbacks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [activityDetails, setActivityDetails] = useState<ActivityDetails | null>(null);
+  const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSortChange = (newField) => {
+  const handleSortChange = (newField: SortFields): void => {
     // If the field changes, default to 'asc' or keep current direction if preferred
-    const newDirection = sorting.field === newField ? (sorting.direction === "asc" ? "desc" : "asc") : 'asc';
+    const newDirection: SortDirection = sorting.field === newField ? (sorting.direction === "asc" ? "desc" : "asc") : 'asc';
     setSorting({ field: newField, direction: newDirection });
     setPage(0); // Reset to first page on sort field change
   };
 
-  const toggleSortDirection = () => {
+  const toggleSortDirection = (): void => {
     setSorting(prevSorting => ({
       ...prevSorting,
       direction: prevSorting.direction === 'asc' ? 'desc' : 'asc',
@@ -143,17 +224,19 @@ const OrganizationParticipantManagement = () => {
     setPage(0); // Reset to first page on sort direction change
   };
 
-  const fetchParticipants = async () => {
+  const fetchParticipants = async (): Promise<void> => {
+    if (!id) return;
+
     try {
       const token = localStorage.getItem("access_token");
 
       let queryString = `activityId=${id}&page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
 
       if (filters.participationStatus) {
-        queryString += `&participationStatus=${filters.participationStatus}`; // Changed from participationStatus to status
+        queryString += `&participationStatus=${filters.participationStatus}`;
       }
       if (filters.participationRole) {
-        queryString += `&participationRole=${filters.participationRole}`; // Changed from participationRole to role
+        queryString += `&participationRole=${filters.participationRole}`;
       }
 
       if (filters.registeredAfter) {
@@ -189,7 +272,7 @@ const OrganizationParticipantManagement = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data: ApiResponse<ParticipantsResponse> = await response.json();
       setParticipants(data.data.results);
       setTotalPages(data.data.total_pages);
     } catch (error) {
@@ -197,7 +280,9 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  const fetchActivityDetails = async () => {
+  const fetchActivityDetails = async (): Promise<void> => {
+    if (!id) return;
+
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(`http://localhost:8080/activities/${id}`, {
@@ -210,7 +295,7 @@ const OrganizationParticipantManagement = () => {
         throw new Error('Failed to fetch activity details');
       }
 
-      const data = await response.json();
+      const data: ApiResponse<ActivityDetails> = await response.json();
       setActivityDetails(data.data);
     } catch (error) {
       console.error('Error fetching activity details:', error);
@@ -220,7 +305,9 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  const fetchFeedbacks = async () => {
+  const fetchFeedbacks = async (): Promise<void> => {
+    if (!id) return;
+
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(`http://localhost:8080/activities/${id}/feedbacks`, {
@@ -233,7 +320,7 @@ const OrganizationParticipantManagement = () => {
         throw new Error('Failed to fetch feedbacks');
       }
 
-      const data = await response.json();
+      const data: ApiResponse<Feedback[]> = await response.json();
       setFeedbacks(data.data);
     } catch (error) {
       console.error('Error fetching feedbacks:', error);
@@ -247,11 +334,11 @@ const OrganizationParticipantManagement = () => {
     console.log(participants);
   }, [id, page, filters, sorting]);
 
-  const handlePageChange = (event, value) => {
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number): void => {
     setPage(value - 1);
   };
 
-  const handleFilterChange = (field) => (event) => {
+  const handleFilterChange = (field: keyof Filters) => (event: SelectChangeEvent): void => {
     setFilters((prev) => ({
       ...prev,
       [field]: event.target.value,
@@ -259,7 +346,15 @@ const OrganizationParticipantManagement = () => {
     setPage(0);
   };
 
-  const handleOpenVerificationModal = (participantId, status) => {
+  const handleTextFilterChange = (field: keyof Filters) => (event: React.ChangeEvent<HTMLInputElement>): void => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: event.target.value,
+    }));
+    setPage(0);
+  };
+
+  const handleOpenVerificationModal = (participantId: number, status: ParticipationStatus): void => {
     setVerificationModal({
       open: true,
       participantId,
@@ -269,7 +364,7 @@ const OrganizationParticipantManagement = () => {
     });
   };
 
-  const handleCloseVerificationModal = () => {
+  const handleCloseVerificationModal = (): void => {
     setVerificationModal({
       open: false,
       participantId: null,
@@ -279,10 +374,12 @@ const OrganizationParticipantManagement = () => {
     });
   };
 
-  const handleVerificationSubmit = async () => {
+  const handleVerificationSubmit = async (): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       const { participantId, status, rejection_reason, verified_note } = verificationModal;
+
+      if (!participantId || !status) return;
 
       const response = await fetch(
         `http://localhost:8080/participants/verify`,
@@ -295,8 +392,8 @@ const OrganizationParticipantManagement = () => {
           body: JSON.stringify({
             participation_id: participantId,
             status: status,
-            rejection_reason: status === "REJECTED" ? rejection_reason : null,
-            verified_note: status === "VERIFIED" ? verified_note : null,
+            rejection_reason: status === ParticipationStatus.REJECTED ? rejection_reason : null,
+            verified_note: status === ParticipationStatus.VERIFIED ? verified_note : null,
           }),
         }
       );
@@ -320,7 +417,7 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  const handleRemove = async (participantId) => {
+  const handleRemove = async (participantId: number): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(
@@ -345,7 +442,7 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  const handleOpenDetailLog = async (participantId) => {
+  const handleOpenDetailLog = async (participantId: number): Promise<void> => {
     setDetailLogModal(prev => ({ ...prev, open: true, loading: true, error: null }));
     try {
       const token = localStorage.getItem("access_token");
@@ -364,7 +461,7 @@ const OrganizationParticipantManagement = () => {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const responseData = await response.json();
+      const responseData: ApiResponse<Participant> = await response.json();
       
       if (responseData.status_code !== 200) {
         throw new Error('Failed to fetch participant details');
@@ -385,7 +482,7 @@ const OrganizationParticipantManagement = () => {
     }
   };
 
-  const handleCloseDetailLog = () => {
+  const handleCloseDetailLog = (): void => {
     setDetailLogModal({
       open: false,
       participant: null,
@@ -395,8 +492,8 @@ const OrganizationParticipantManagement = () => {
   };
 
   // Update the ActionButtons component
-  const ActionButtons = ({ participant, onVerify, onRemove }) => {
-    const buttons = [];
+  const ActionButtons: React.FC<ActionButtonsProps> = ({ participant, onVerify, onRemove }) => {
+    const buttons: React.ReactNode[] = [];
     
     // Add Detail Log button for all statuses
     buttons.push(
@@ -415,16 +512,16 @@ const OrganizationParticipantManagement = () => {
 
     // Add status-specific buttons
     switch (participant.participation_status) {
-      case "UNVERIFIED":
+      case ParticipationStatus.UNVERIFIED:
         buttons.push(
-          <>
+          <React.Fragment key="unverified-actions">
             <Button
               key="verify"
               variant="contained"
               color="primary"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "VERIFIED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.VERIFIED)}
             >
               Verify
             </Button>
@@ -434,23 +531,23 @@ const OrganizationParticipantManagement = () => {
               color="error"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "REJECTED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.REJECTED)}
             >
               Reject
             </Button>
-          </>
+          </React.Fragment>
         );
         break;
-      case "VERIFIED":
+      case ParticipationStatus.VERIFIED:
         buttons.push(
-          <>
+          <React.Fragment key="verified-actions">
             <Button
               key="unverify"
               variant="contained"
               color="warning"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "UNVERIFIED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.UNVERIFIED)}
             >
               Unverify
             </Button>
@@ -460,23 +557,23 @@ const OrganizationParticipantManagement = () => {
               color="error"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "REJECTED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.REJECTED)}
             >
               Reject
             </Button>
-          </>
+          </React.Fragment>
         );
         break;
-      case "REJECTED":
+      case ParticipationStatus.REJECTED:
         buttons.push(
-          <>
+          <React.Fragment key="rejected-actions">
             <Button
               key="verify"
               variant="contained"
               color="primary"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "VERIFIED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.VERIFIED)}
             >
               Verify
             </Button>
@@ -486,11 +583,11 @@ const OrganizationParticipantManagement = () => {
               color="warning"
               size="small"
               sx={{ mr: 1 }}
-              onClick={() => handleOpenVerificationModal(participant.id, "UNVERIFIED")}
+              onClick={() => handleOpenVerificationModal(participant.id, ParticipationStatus.UNVERIFIED)}
             >
               Unverify
             </Button>
-          </>
+          </React.Fragment>
         );
         break;
     }
@@ -512,38 +609,38 @@ const OrganizationParticipantManagement = () => {
   };
 
   // Update the Dialog title and content based on the action
-  const getDialogTitle = (status) => {
+  const getDialogTitle = (status: ParticipationStatus | null): string => {
     switch (status) {
-      case "VERIFIED":
+      case ParticipationStatus.VERIFIED:
         return "Verify Participant";
-      case "REJECTED":
+      case ParticipationStatus.REJECTED:
         return "Reject Participant";
-      case "UNVERIFIED":
+      case ParticipationStatus.UNVERIFIED:
         return "Unverify Participant";
       default:
         return "Update Participant Status";
     }
   };
 
-  const getDialogLabel = (status) => {
+  const getDialogLabel = (status: ParticipationStatus | null): string => {
     switch (status) {
-      case "VERIFIED":
+      case ParticipationStatus.VERIFIED:
         return "Verification Note";
-      case "REJECTED":
+      case ParticipationStatus.REJECTED:
         return "Rejection Reason";
-      case "UNVERIFIED":
+      case ParticipationStatus.UNVERIFIED:
         return "Unverification Reason";
       default:
         return "Note";
     }
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString();
   };
 
   // Add renderStars function
-  const renderStars = (rating) => {
+  const renderStars = (rating: number): React.ReactNode => {
     return (
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
         <Rating
@@ -561,6 +658,7 @@ const OrganizationParticipantManagement = () => {
   };
 
   return (
+    // @ts-ignore
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" gutterBottom>
         Participant Management
@@ -606,7 +704,7 @@ const OrganizationParticipantManagement = () => {
             type="datetime-local"
             label="Registered After"
             value={filters.registeredAfter}
-            onChange={handleFilterChange("registeredAfter")}
+            onChange={handleTextFilterChange("registeredAfter")}
             InputLabelProps={{ shrink: true }}
           />
         </Grid>
@@ -617,7 +715,7 @@ const OrganizationParticipantManagement = () => {
             type="datetime-local"
             label="Registered Before"
             value={filters.registeredBefore}
-            onChange={handleFilterChange("registeredBefore")}
+            onChange={handleTextFilterChange("registeredBefore")}
             InputLabelProps={{ shrink: true }}
           />
         </Grid>
@@ -627,7 +725,7 @@ const OrganizationParticipantManagement = () => {
             size="small"
             label="Identify Code"
             value={filters.identifyCode}
-            onChange={handleFilterChange("identifyCode")}
+            onChange={handleTextFilterChange("identifyCode")}
             placeholder="Enter identify code"
           />
         </Grid>
@@ -637,7 +735,7 @@ const OrganizationParticipantManagement = () => {
             size="small"
             label="Participant Name"
             value={filters.participantName}
-            onChange={handleFilterChange("participantName")}
+            onChange={handleTextFilterChange("participantName")}
             placeholder="Enter name"
           />
         </Grid>
@@ -645,7 +743,7 @@ const OrganizationParticipantManagement = () => {
           <FormControl fullWidth size="small" sx={{ mr: 1 }}>
             <Select
               value={sorting.field}
-              onChange={(e) => handleSortChange(e.target.value)}
+              onChange={(e) => handleSortChange(e.target.value as SortFields)}
               displayEmpty
             >
               <MenuItem value={SortFields.REGISTRATION_TIME}>
@@ -686,7 +784,6 @@ const OrganizationParticipantManagement = () => {
                 <TableCell>{participant.id}</TableCell>
                 <TableCell>{participant.identify_code}</TableCell>
                 <TableCell>{participant.participant_name}</TableCell>
-                {/* <TableCell>{participant.activity_venue}</TableCell> */}
                 <TableCell>
                   {new Date(participant.start_date).toLocaleString()}
                 </TableCell>
@@ -751,11 +848,11 @@ const OrganizationParticipantManagement = () => {
               multiline
               rows={4}
               label={getDialogLabel(verificationModal.status)}
-              value={verificationModal.status === "VERIFIED" ? verificationModal.verified_note : verificationModal.rejection_reason}
+              value={verificationModal.status === ParticipationStatus.VERIFIED ? verificationModal.verified_note : verificationModal.rejection_reason}
               onChange={(e) =>
                 setVerificationModal((prev) => ({
                   ...prev,
-                  [verificationModal.status === "VERIFIED" ? "verified_note" : "rejection_reason"]: e.target.value,
+                  [verificationModal.status === ParticipationStatus.VERIFIED ? "verified_note" : "rejection_reason"]: e.target.value,
                 }))
               }
               required
@@ -769,16 +866,16 @@ const OrganizationParticipantManagement = () => {
             onClick={handleVerificationSubmit}
             variant="contained"
             color={
-              verificationModal.status === "VERIFIED"
+              verificationModal.status === ParticipationStatus.VERIFIED
                 ? "success"
-                : verificationModal.status === "REJECTED"
+                : verificationModal.status === ParticipationStatus.REJECTED
                 ? "error"
                 : "warning"
             }
           >
-            {verificationModal.status === "VERIFIED"
+            {verificationModal.status === ParticipationStatus.VERIFIED
               ? "Verify"
-              : verificationModal.status === "REJECTED"
+              : verificationModal.status === ParticipationStatus.REJECTED
               ? "Reject"
               : "Unverify"}
           </Button>
@@ -805,45 +902,6 @@ const OrganizationParticipantManagement = () => {
             </Alert>
           ) : detailLogModal.participant ? (
             <>
-              {/* <div className="detail-row">
-                <div className="detail-label">Student ID</div>
-                <div className="detail-value">{detailLogModal.participant.student_id || 'N/A'}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Identify Code</div>
-                <div className="detail-value">{detailLogModal.participant.identify_code || 'N/A'}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Participant Name</div>
-                <div className="detail-value">{detailLogModal.participant.participant_name || 'N/A'}</div>
-              </div> */}
-              {/* <div className="detail-row">
-                <div className="detail-label">Major</div>
-                <div className="detail-value">{detailLogModal.participant.major || 'N/A'}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Activity</div>
-                <div className="detail-value">{detailLogModal.participant.activity_name}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Category</div>
-                <div className="detail-value">{detailLogModal.participant.activity_category}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Venue</div>
-                <div className="detail-value">{detailLogModal.participant.activity_venue}</div>
-              </div>
-              <div className="detail-row">
-                <div className="detail-label">Activity Status</div>
-                <div className="detail-value">
-                  <Chip
-                    label={detailLogModal.participant.activity_status}
-                    color={getStatusColor(detailLogModal.participant.activity_status)}
-                    size="small"
-                    className="detail-chip"
-                  />
-                </div>
-              </div> */}
               <div className="detail-row flex justify-between items-center">
                 <div className="detail-label">Date Range:</div>
                 <div className="detail-value">
@@ -856,7 +914,7 @@ const OrganizationParticipantManagement = () => {
                   {formatDate(detailLogModal.participant.registration_time)}
                 </div>
               </div>
-              <div className="detail-row  flex justify-between items-center">
+              <div className="detail-row flex justify-between items-center">
                 <div className="detail-label">Status:</div>
                 <div className="detail-value">
                   <Chip
@@ -909,10 +967,6 @@ const OrganizationParticipantManagement = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      
-      </Box>
+    </Box>
   );
 };
-
-export default OrganizationParticipantManagement;
