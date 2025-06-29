@@ -44,22 +44,89 @@ import {
 // Lazy load the LocationMap component
 const LocationMap = lazy(() => import('@/components/LocationMap'));
 
-const OrganizationActivityDetail = () => {
-  const { id } = useParams();
+// Type definitions
+interface Organization {
+  id: string;
+  organization_name: string;
+  organization_category: string;
+  representative_email: string;
+  representative_phone: string;
+}
+
+interface ActivitySchedule {
+  id: string;
+  activity_description: string;
+  location: string;
+  start_time: string;
+  end_time: string;
+  status: 'PUBLISHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+}
+
+interface Feedback {
+  id: string;
+  student_name: string;
+  feedback_description: string;
+  rating: number;
+  created_date: string;
+  organization_response?: string;
+  responded_at?: string;
+}
+
+interface Activity {
+  id: string;
+  activity_name: string;
+  short_description: string;
+  description: string;
+  activity_status: 'PUBLISHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  is_featured: boolean;
+  activity_venue: string;
+  address: string;
+  latitude?: number;
+  longitude?: number;
+  current_participants: number;
+  capacity_limit: number;
+  fee?: number;
+  start_date: string;
+  end_date: string;
+  registration_deadline: string;
+  tags?: string[];
+  organization: Organization;
+  activity_schedules?: ActivitySchedule[];
+  feedbacks?: Feedback[];
+}
+
+interface ApiResponse<T> {
+  status_code: number;
+  data: T;
+  message?: string;
+}
+
+interface FormatDateOptions {
+  dateOnly?: boolean;
+}
+
+type ActivityStatus = 'PUBLISHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+type ScheduleStatus = 'PUBLISHED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+
+const OrganizationActivityDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [activity, setActivity] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [replyDialogOpen, setReplyDialogOpen] = useState(false);
-  const [selectedFeedback, setSelectedFeedback] = useState(null);
-  const [replyText, setReplyText] = useState('');
-  const [replyLoading, setReplyLoading] = useState(false);
+  
+  const [activity, setActivity] = useState<Activity | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [replyDialogOpen, setReplyDialogOpen] = useState<boolean>(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<Feedback | null>(null);
+  const [replyText, setReplyText] = useState<string>('');
+  const [replyLoading, setReplyLoading] = useState<boolean>(false);
 
   useEffect(() => {
-    fetchActivityDetail();
+    if (id) {
+      fetchActivityDetail();
+    }
   }, [id]);
 
-  const fetchActivityDetail = async () => {
+  const fetchActivityDetail = async (): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch(`http://localhost:8080/activities/${id}`, {
@@ -68,7 +135,7 @@ const OrganizationActivityDetail = () => {
           "Content-Type": "application/json",
         },
       });
-      const data = await response.json();
+      const data: ApiResponse<Activity> = await response.json();
       if (data.status_code === 200) {
         setActivity(data.data);
       } else {
@@ -81,7 +148,7 @@ const OrganizationActivityDetail = () => {
     }
   };
 
-  const formatDate = (dateString, options = {}) => {
+  const formatDate = (dateString: string, options: FormatDateOptions = {}): string => {
     try {
       if (options.dateOnly) {
         return format(new Date(dateString), 'MMM d, yyyy');
@@ -98,7 +165,7 @@ const OrganizationActivityDetail = () => {
     }
   };
 
-  const formatCurrency = (fee) => {
+  const formatCurrency = (fee?: number): string => {
     if (!fee) return "Free";
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -106,7 +173,7 @@ const OrganizationActivityDetail = () => {
     }).format(fee);
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: ActivityStatus): string => {
     switch (status) {
       case "PUBLISHED":
         return "bg-yellow-100 text-yellow-800";
@@ -121,7 +188,7 @@ const OrganizationActivityDetail = () => {
     }
   };
 
-  const getScheduleStatusColor = (status) => {
+  const getScheduleStatusColor = (status: ScheduleStatus): string => {
     switch (status) {
       case "IN_PROGRESS":
         return "bg-green-100 text-green-800";
@@ -136,8 +203,8 @@ const OrganizationActivityDetail = () => {
     }
   };
 
-  const renderStars = (rating) => {
-    const stars = [];
+  const renderStars = (rating: number): JSX.Element => {
+    const stars: JSX.Element[] = [];
     const fullStars = Math.floor(rating / 2);
     const hasHalfStar = rating % 2 >= 1;
     
@@ -153,17 +220,17 @@ const OrganizationActivityDetail = () => {
     return <div className="flex">{stars}</div>;
   };
 
-  const handleManageParticipant = () => {
+  const handleManageParticipant = (): void => {
     navigate(`/organization/activities/${id}/participants`);
   };
 
-  const handleReplyClick = (feedback) => {
+  const handleReplyClick = (feedback: Feedback): void => {
     setSelectedFeedback(feedback);
     setReplyText(feedback.organization_response || '');
     setReplyDialogOpen(true);
   };
 
-  const handleReplySubmit = async () => {
+  const handleReplySubmit = async (): Promise<void> => {
     if (!selectedFeedback || !replyText.trim()) return;
 
     setReplyLoading(true);
@@ -181,17 +248,20 @@ const OrganizationActivityDetail = () => {
         }),
       });
 
-      const data = await response.json();
+      const data: ApiResponse<any> = await response.json();
       if (data.status_code === 200) {
         // Update the feedback in the local state
-        setActivity(prevActivity => ({
-          ...prevActivity,
-          feedbacks: prevActivity.feedbacks.map(feedback =>
-            feedback.id === selectedFeedback.id
-              ? { ...feedback, organization_response: replyText.trim(), responded_at: new Date().toISOString() }
-              : feedback
-          )
-        }));
+        setActivity(prevActivity => {
+          if (!prevActivity) return null;
+          return {
+            ...prevActivity,
+            feedbacks: prevActivity.feedbacks?.map(feedback =>
+              feedback.id === selectedFeedback.id
+                ? { ...feedback, organization_response: replyText.trim(), responded_at: new Date().toISOString() }
+                : feedback
+            )
+          };
+        });
         setReplyDialogOpen(false);
       } else {
         setError("Failed to submit reply");
@@ -203,18 +273,31 @@ const OrganizationActivityDetail = () => {
     }
   };
 
-  if (loading)
+  const handleDialogClose = (): void => {
+    setReplyDialogOpen(false);
+  };
+
+  const handleReplyTextChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    setReplyText(event.target.value);
+  };
+
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-screen">
         Loading...
       </div>
     );
-  if (error)
+  }
+
+  if (error) {
     return <div className="text-red-500 text-center mt-4">{error}</div>;
-  if (!activity)
+  }
+
+  if (!activity) {
     return (
       <div className="text-red-500 text-center mt-4">Activity not found</div>
     );
+  }
 
   return (
     <>
@@ -499,7 +582,7 @@ const OrganizationActivityDetail = () => {
       </div>
 
       {/* Reply Dialog */}
-      <Dialog open={replyDialogOpen} onClose={() => setReplyDialogOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog open={replyDialogOpen} onClose={handleDialogClose} maxWidth="sm" fullWidth>
         <DialogTitle>Reply to Feedback</DialogTitle>
         <DialogContent>
           <TextField
@@ -507,14 +590,14 @@ const OrganizationActivityDetail = () => {
             multiline
             rows={4}
             value={replyText}
-            onChange={(e) => setReplyText(e.target.value)}
+            onChange={handleReplyTextChange}
             placeholder="Type your response here..."
             variant="outlined"
             className="mt-4"
           />
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setReplyDialogOpen(false)}>Cancel</Button>
+          <Button onClick={handleDialogClose}>Cancel</Button>
           <Button
             onClick={handleReplySubmit}
             variant="contained"

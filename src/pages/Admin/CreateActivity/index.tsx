@@ -254,11 +254,12 @@ const CreateActivity: React.FC = () => {
     }));
   };
 
-  const handleSelectChange = (e: SelectChangeEvent<string | boolean>): void => {
+  const handleSelectChange = (e: SelectChangeEvent<unknown>): void => {
     const { name, value } = e.target;
+    // Cast value to the expected field type (string | boolean) before updating state
     setFormData((prev) => ({
       ...prev,
-      [name as string]: value,
+      [name as string]: value as unknown as string | boolean,
     }));
   };
 

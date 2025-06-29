@@ -21,6 +21,7 @@ import {
   Collapse,
   Grid,
   Tooltip,
+  SelectChangeEvent,
 } from "@mui/material";
 import { LocalizationProvider, DateTimePicker } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
@@ -44,56 +45,119 @@ import ActivityUpdateForm from '@/components/ActivityUpdateForm';
 import ActivityStatisticsModal from '@/components/ActivityStatisticsModal';
 import activityStatisticsService from '@/services/activityStatisticsService';
 
-const ActivityStatus = {
-  IN_PROGRESS: "IN_PROGRESS",
-  COMPLETED: "COMPLETED",
-  PUBLISHED: "PUBLISHED",
-  CANCELLED: "CANCELLED",
-  PENDING: "PENDING",
-};
+// Enums
+enum ActivityStatus {
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  PUBLISHED = "PUBLISHED",
+  CANCELLED = "CANCELLED",
+  PENDING = "PENDING",
+}
 
-const ActivityCategory = {
-  STUDENT_ORGANIZATION: "STUDENT_ORGANIZATION",
-  UNIVERSITY: "UNIVERSITY",
-  THIRD_PARTY: "THIRD_PARTY"
-};
+enum ActivityCategory {
+  STUDENT_ORGANIZATION = "STUDENT_ORGANIZATION",
+  UNIVERSITY = "UNIVERSITY",
+  THIRD_PARTY = "THIRD_PARTY"
+}
 
-const SortFields = {
-  START_DATE: "startDate",
-  END_DATE: "endDate",
-  ACTIVITY_NAME: "activityName",
-  ACTIVITY_STATUS: "activityStatus",
-  ACTIVITY_CATEGORY: "activityCategory",
-  CREATED_DATE: "createdDate", // Added createdDate
-};
+enum SortFields {
+  START_DATE = "startDate",
+  END_DATE = "endDate",
+  ACTIVITY_NAME = "activityName",
+  ACTIVITY_STATUS = "activityStatus",
+  ACTIVITY_CATEGORY = "activityCategory",
+  CREATED_DATE = "createdDate",
+}
 
+// Type definitions
+interface Activity {
+  id: number;
+  activity_name: string;
+  activity_category: ActivityCategory;
+  activity_venue: string;
+  start_date: string;
+  end_date: string;
+  activity_status: ActivityStatus;
+  current_participants: number;
+  capacity_limit: number;
+  created_date: string;
+  attendance_score_unit?: number;
+  fee?: number;
+  registration_deadline?: string;
+}
 
-const OrganizationActivityManagement = () => {
+interface Filters {
+  status: ActivityStatus | null;
+  category: ActivityCategory;
+  startDateFrom: Date | null;
+  startDateTo: Date | null;
+  activity_name?: string;
+  activity_category?: ActivityCategory;
+  endDateFrom?: Date | null;
+  endDateTo?: Date | null;
+  min_attendance_score_unit?: number;
+  max_attendance_score_unit?: number;
+  min_capacity_limit?: number;
+  max_capacity_limit?: number;
+  activity_venue?: string;
+  fee?: number;
+  registration_deadline?: Date | null;
+  start_date_from?: Date | null;
+  start_date_to?: Date | null;
+}
+
+interface Sorting {
+  field: SortFields;
+  direction: "asc" | "desc";
+}
+
+interface ApiResponse<T> {
+  status_code: number;
+  message: string;
+  data: T;
+}
+
+interface PaginatedActivities {
+  results: Activity[];
+  total_pages: number;
+}
+
+interface ActivityStatistics {
+  // Add specific properties based on your statistics structure
+  [key: string]: any;
+}
+
+// Account type (adjust based on your actual account structure)
+interface Account {
+  id: string | number;
+}
+
+const OrganizationActivityManagement: React.FC = () => {
   const navigate = useNavigate();
-  const [activities, setActivities] = useState([]);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState({
-    status: null, // Default to PUBLISHED
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [page, setPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [filters, setFilters] = useState<Filters>({
+    status: null,
     category: ActivityCategory.UNIVERSITY,
     startDateFrom: null,
     startDateTo: null,
   });
 
-  const [sorting, setSorting] = useState({
+  const [sorting, setSorting] = useState<Sorting>({
     field: SortFields.START_DATE,
     direction: "desc",
   });
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState(null);
-  const [showUpdateForm, setShowUpdateForm] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [showStatisticsModal, setShowStatisticsModal] = useState(false);
-  const [activityStatistics, setActivityStatistics] = useState(null);
-  const [statisticsLoading, setStatisticsLoading] = useState(false);
-  const [selectedStatisticsActivityId, setSelectedStatisticsActivityId] = useState(null);
+  const [showFilters, setShowFilters] = useState<boolean>(false);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
+  const [showUpdateForm, setShowUpdateForm] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [showStatisticsModal, setShowStatisticsModal] = useState<boolean>(false);
+  const [activityStatistics, setActivityStatistics] = useState<ActivityStatistics | null>(null);
+  const [statisticsLoading, setStatisticsLoading] = useState<boolean>(false);
+  const [selectedStatisticsActivityId, setSelectedStatisticsActivityId] = useState<number | null>(null);
 
-  const handleSortChange = (field) => {
+  const handleSortChange = (field: SortFields): void => {
     setSorting((prev) => ({
       field,
       direction:
@@ -102,7 +166,7 @@ const OrganizationActivityManagement = () => {
     setPage(0);
   };
 
-  const fetchActivities = async () => {
+  const fetchActivities = async (): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
@@ -162,7 +226,7 @@ const OrganizationActivityManagement = () => {
         }
       );
 
-      const data = await response.json();
+      const data: ApiResponse<PaginatedActivities> = await response.json();
       if (data.status_code === 200 && data.data) {
         setActivities(data.data.results);
         setTotalPages(data.data.total_pages);
@@ -182,12 +246,11 @@ const OrganizationActivityManagement = () => {
     fetchActivities();
   }, [page, filters, sorting]);
 
-  const handlePageChange = (event, value) => {
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number): void => {
     setPage(value - 1);
-  }
+  };
 
-  const handleFilterChange = (field) => (event) => {
-    const value = event.target.value;
+  const handleFilterChange = (field: keyof Filters, value: any): void => {
     setFilters((prev) => ({
       ...prev,
       [field]: value,
@@ -195,12 +258,20 @@ const OrganizationActivityManagement = () => {
     setPage(0);
   };
 
-  const handleSearch = () => {
+  const handleTextFieldChange = (field: keyof Filters) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    handleFilterChange(field, event.target.value);
+  };
+
+  const handleSelectChange = (field: keyof Filters) => (event: SelectChangeEvent<any>) => {
+    handleFilterChange(field, event.target.value);
+  };
+
+  const handleSearch = (): void => {
     setPage(0);
     fetchActivities();
   };
 
-  const handleEdit = async (activityId) => {
+  const handleEdit = async (activityId: number): Promise<void> => {
     try {
       setLoading(true);
       const token = localStorage.getItem("access_token");
@@ -215,7 +286,7 @@ const OrganizationActivityManagement = () => {
         }
       );
 
-      const data = await response.json();
+      const data: ApiResponse<Activity> = await response.json();
       if (data.status_code === 200) {
         // Set the full activity data with schedules
         setSelectedActivity(data.data);
@@ -230,7 +301,7 @@ const OrganizationActivityManagement = () => {
     }
   };
 
-  const handleUpdateSuccess = async (updatedActivity) => {
+  const handleUpdateSuccess = async (updatedActivity: unknown): Promise<void> => {
     try {
       const token = localStorage.getItem("access_token");
       const response = await fetch("http://localhost:8080/activities/update", {
@@ -242,7 +313,7 @@ const OrganizationActivityManagement = () => {
         body: JSON.stringify(updatedActivity),
       });
 
-      const data = await response.json();
+      const data: ApiResponse<Activity> = await response.json();
       if (data.status_code === 200) {
         // Close the form and refresh the activity list
         setShowUpdateForm(false);
@@ -256,12 +327,12 @@ const OrganizationActivityManagement = () => {
     }
   };
 
-  const handleUpdateCancel = () => {
+  const handleUpdateCancel = (): void => {
     setShowUpdateForm(false);
     setSelectedActivity(null);
   };
 
-  const handleRemove = async (activityId) => {
+  const handleRemove = async (activityId: number): Promise<void> => {
     if (window.confirm("Are you sure you want to remove this activity?")) {
       try {
         const token = localStorage.getItem("access_token");
@@ -287,7 +358,7 @@ const OrganizationActivityManagement = () => {
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: ActivityStatus): "warning" | "info" | "primary" | "success" | "error" | "default" => {
     switch (status) {
       case ActivityStatus.PENDING:
         return "warning"; 
@@ -304,31 +375,30 @@ const OrganizationActivityManagement = () => {
     }
   };
 
-  const getCategoryColor = (category) => {
+  const getCategoryColor = (category: ActivityCategory): "secondary" | "primary" | "success" | "default" => {
     switch (category) {
-      case "THIRD_PARTY":
+      case ActivityCategory.THIRD_PARTY:
         return "secondary";
-      case "UNIVERSITY":
+      case ActivityCategory.UNIVERSITY:
         return "primary";
-      case "STUDENT_ORGANIZATION":
+      case ActivityCategory.STUDENT_ORGANIZATION:
         return "success";
       default:
         return "default";
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A'; // Handle cases where date might be null or undefined
-    if (!dateString) return "";
+  const formatDate = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'N/A';
     return new Date(dateString).toLocaleString();
   };
 
-  const handleRowClick = (activityId) => {
+  const handleRowClick = (activityId: number): void => {
     navigate(`/organization/activities/${activityId}`);
   };
 
   // Handle showing activity statistics
-  const handleShowStatistics = async (activityId, event) => {
+  const handleShowStatistics = async (activityId: number, event: React.MouseEvent): Promise<void> => {
     event.stopPropagation(); // Prevent row click event
     setStatisticsLoading(true);
     setShowStatisticsModal(true);
@@ -345,10 +415,16 @@ const OrganizationActivityManagement = () => {
   };
 
   // Handle closing statistics modal
-  const handleCloseStatistics = () => {
+  const handleCloseStatistics = (): void => {
     setShowStatisticsModal(false);
     setSelectedStatisticsActivityId(null);
     setActivityStatistics(null);
+  };
+
+  const handleKeyPress = (event: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (event.key === 'Enter') {
+      handleSearch();
+    }
   };
 
   return (
@@ -363,6 +439,7 @@ const OrganizationActivityManagement = () => {
             </div>
           </div>
         </header>
+        {/* @ts-ignore */}
         <Box className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
           {showUpdateForm ? (
             <>
@@ -370,7 +447,6 @@ const OrganizationActivityManagement = () => {
                 Update Activity
               </Typography>
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
-
                 <ActivityUpdateForm
                   activity={selectedActivity}
                   onSubmit={handleUpdateSuccess}
@@ -400,7 +476,7 @@ const OrganizationActivityManagement = () => {
                   </div>
                   <p className="text-4xl font-bold">
                     {
-                      activities.filter((a) => a.activity_status === "IN_PROGRESS")
+                      activities.filter((a) => a.activity_status === ActivityStatus.IN_PROGRESS)
                         .length
                     }
                   </p>
@@ -415,7 +491,7 @@ const OrganizationActivityManagement = () => {
                   </div>
                   <p className="text-4xl font-bold">
                     {
-                      activities.filter((a) => a.activity_status === "COMPLETED")
+                      activities.filter((a) => a.activity_status === ActivityStatus.COMPLETED)
                         .length
                     }
                   </p>
@@ -428,13 +504,9 @@ const OrganizationActivityManagement = () => {
                     <TextField
                       fullWidth
                       label="Activity Name"
-                      value={filters.activity_name}
-                      onChange={handleFilterChange("activity_name")}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          handleSearch();
-                        }
-                      }}
+                      value={filters.activity_name || ''}
+                      onChange={handleTextFieldChange("activity_name")}
+                      onKeyPress={handleKeyPress}
                       variant="outlined"
                       size="medium"
                       className="bg-white dark:bg-slate-700 rounded-lg"
@@ -469,8 +541,8 @@ const OrganizationActivityManagement = () => {
                         >
                           <InputLabel>Category</InputLabel>
                           <Select
-                            value={filters.activity_category}
-                            onChange={handleFilterChange("activity_category")}
+                            value={filters.activity_category || ''}
+                            onChange={handleSelectChange("activity_category")}
                             label="Category"
                           >
                             <MenuItem value="">All Categories</MenuItem>
@@ -492,8 +564,8 @@ const OrganizationActivityManagement = () => {
                         >
                           <InputLabel>Status</InputLabel>
                           <Select
-                            value={filters.status}
-                            onChange={handleFilterChange("status")}
+                            value={filters.status || ''}
+                            onChange={handleSelectChange("status")}
                             label="Status"
                           >
                             <MenuItem value="">All Statuses</MenuItem>
@@ -516,7 +588,7 @@ const OrganizationActivityManagement = () => {
                           <InputLabel>Sort By</InputLabel>
                           <Select
                             value={sorting.field}
-                            onChange={(e) => handleSortChange(e.target.value)}
+                            onChange={(e) => handleSortChange(e.target.value as SortFields)}
                             label="Sort By"
                           >
                             <MenuItem value={SortFields.START_DATE}>
@@ -558,19 +630,18 @@ const OrganizationActivityManagement = () => {
                         <DateTimePicker
                           label="Start Date From"
                           value={filters.start_date_from}
-                          onChange={(date) =>
+                          onChange={(date: Date | null) =>
                             setFilters((prev) => ({
                               ...prev,
                               start_date_from: date,
                             }))
                           }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              className: "bg-white dark:bg-slate-700 rounded-lg"
+                            }
+                          }}
                         />
                       </div>
                     </Grid>
@@ -580,19 +651,18 @@ const OrganizationActivityManagement = () => {
                         <DateTimePicker
                           label="Start Date To"
                           value={filters.start_date_to}
-                          onChange={(date) =>
+                          onChange={(date: Date | null) =>
                             setFilters((prev) => ({
                               ...prev,
                               start_date_to: date,
                             }))
                           }
-                          renderInput={(params) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
+                          slotProps={{
+                            textField: {
+                              fullWidth: true,
+                              className: "bg-white dark:bg-slate-700 rounded-lg"
+                            }
+                          }}
                         />
                       </div>
                     </Grid>
@@ -750,21 +820,13 @@ const OrganizationActivityManagement = () => {
         </Box>
       </div>
 
-      {/* {showUpdateForm && selectedActivity && (
-        <ActivityUpdateForm
-          activity={selectedActivity}
-          onCancel={handleUpdateCancel}
-          onSuccess={handleUpdateSuccess}
-        />
-      )} */}
-
       {/* Activity Statistics Modal */}
       <ActivityStatisticsModal
         open={showStatisticsModal}
         onClose={handleCloseStatistics}
         statistics={activityStatistics}
         loading={statisticsLoading}
-        activityId={selectedStatisticsActivityId}
+        activityId={selectedStatisticsActivityId?.toString() || ''}
       />
     </LocalizationProvider>
   );

@@ -12,12 +12,13 @@ import {
   Button,
   CircularProgress,
   Divider,
-  TextField
+  TextField,
+  SelectChangeEvent
 } from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs from 'dayjs';
+import dayjs, { Dayjs } from 'dayjs';
 import { useParams } from 'react-router-dom';
 
 // Import chart components
@@ -31,14 +32,96 @@ import DataTable from '../../../components/charts/DataTable';
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
 import { account } from '@/context/user';
 
-const Analysis = () => {
-  const { organizationId } = useParams();
-  const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+// Type definitions
+interface OrganizationStatistics {
+  organizationName?: string;
+  organizationType?: string;
+  totalActivities?: number;
+  totalParticipants?: number;
+  averageParticipantsPerActivity?: number;
+  participationRate?: number;
+  averageFeedbackRating?: number;
+  totalFeedbacks?: number;
+  upcomingActivities?: number;
+  inProgressActivities?: number;
+  completedActivities?: number;
+  canceledActivities?: number;
+  activitiesByCategory?: Record<string, number>;
+  participantsByCategory?: Record<string, number>;
+  activitiesByMonth?: Record<string, number>;
+  participantsByMonth?: Record<string, number>;
+  topActivities?: TopActivity[];
+  bestRatedActivities?: BestRatedActivity[];
+  [key: string]: any; // Allow for additional properties
+}
+
+interface TopActivity {
+  activityId: number;
+  activityName: string;
+  currentParticipants: number;
+  category: string;
+  status: string;
+  participationRate: number;
+}
+
+interface BestRatedActivity {
+  activityId: number;
+  activityName: string;
+  averageRating: number;
+  feedbackCount: number;
+  category: string;
+}
+
+interface Filters {
+  timePeriod: string;
+  activityType: string;
+  status: string;
+  startDate: Dayjs | null;
+  endDate: Dayjs | null;
+}
+
+interface ChartData {
+  name: string;
+  value: number;
+}
+
+interface MonthlyData {
+  name: string;
+  activities: number;
+  participants: number;
+}
+
+interface TopActivityTableData {
+  id: number;
+  name: string;
+  participants: number;
+  category: string;
+  status: string;
+  participationRate: string;
+}
+
+interface BestRatedTableData {
+  id: number;
+  name: string;
+  rating: number;
+  feedbacks: number;
+  category: string;
+}
+
+interface Column {
+  id: string;
+  label: string;
+  align?: 'left' | 'center' | 'right';
+}
+
+const Analysis: React.FC = () => {
+  const { organizationId } = useParams<{ organizationId?: string }>();
+  const [stats, setStats] = useState<OrganizationStatistics | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Filter state
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Filters>({
     timePeriod: '',
     activityType: '',
     status: '',
@@ -48,13 +131,13 @@ const Analysis = () => {
 
   // Initial load of stats
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchInitialData = async (): Promise<void> => {
       setLoading(true);
       try {
         // Default to an organization ID if not provided in the URL
         const orgId = organizationId || account.id;
         const data = await organizationStatisticsService.getOrganizationStatistics(orgId);
-        setStats(data);
+        setStats(data as OrganizationStatistics);
         setError(null);
       } catch (err) {
         console.error('Error fetching organization statistics:', err);
@@ -68,7 +151,7 @@ const Analysis = () => {
   }, [organizationId]);
 
   // Handle filter changes
-  const handleFilterChange = (field, value) => {
+  const handleFilterChange = (field: keyof Filters, value: string | Dayjs | null): void => {
     setFilters(prev => ({
       ...prev,
       [field]: value
@@ -76,7 +159,7 @@ const Analysis = () => {
   };
 
   // Apply filters
-  const applyFilters = async () => {
+  const applyFilters = async (): Promise<void> => {
     setLoading(true);
     try {
       // Default to an organization ID if not provided in the URL
@@ -85,8 +168,8 @@ const Analysis = () => {
       // Convert dates to ISO strings if they exist
       const filterData = {
         ...filters,
-        startDate: filters.startDate ? filters.startDate.toISOString() : undefined,
-        endDate: filters.endDate ? filters.endDate.toISOString() : undefined
+        startDate: filters.startDate ? filters.startDate.toDate().toISOString() : undefined,
+        endDate: filters.endDate ? filters.endDate.toDate().toISOString() : undefined
       };
       
       // If we have specific date range but no time period
@@ -113,7 +196,7 @@ const Analysis = () => {
   };
 
   // Reset filters
-  const resetFilters = async () => {
+  const resetFilters = async (): Promise<void> => {
     setFilters({
       timePeriod: '',
       activityType: '',
@@ -138,7 +221,7 @@ const Analysis = () => {
   };
 
   // Format data for charts
-  const prepareActivityStatusData = () => {
+  const prepareActivityStatusData = (): ChartData[] => {
     if (!stats) return [];
     
     return [
@@ -149,7 +232,7 @@ const Analysis = () => {
     ];
   };
 
-  const prepareCategoryData = () => {
+  const prepareCategoryData = (): ChartData[] => {
     if (!stats || !stats.activitiesByCategory) return [];
     
     return Object.entries(stats.activitiesByCategory).map(([category, count]) => ({
@@ -158,7 +241,7 @@ const Analysis = () => {
     }));
   };
 
-  const prepareParticipantsByCategoryData = () => {
+  const prepareParticipantsByCategoryData = (): ChartData[] => {
     if (!stats || !stats.participantsByCategory) return [];
     
     return Object.entries(stats.participantsByCategory).map(([category, count]) => ({
@@ -167,7 +250,7 @@ const Analysis = () => {
     }));
   };
 
-  const prepareMonthlyData = () => {
+  const prepareMonthlyData = (): MonthlyData[] => {
     if (!stats || !stats.activitiesByMonth) return [];
     
     return Object.entries(stats.activitiesByMonth).map(([month, count]) => ({
@@ -177,10 +260,10 @@ const Analysis = () => {
     }));
   };
 
-  const prepareTopActivitiesData = () => {
+  const prepareTopActivitiesData = (): TopActivityTableData[] => {
     if (!stats || !stats.topActivities) return [];
     
-    return stats.topActivities.map(activity => ({
+    return stats.topActivities.map((activity: TopActivity) => ({
       id: activity.activityId,
       name: activity.activityName,
       participants: activity.currentParticipants || 0,
@@ -190,10 +273,10 @@ const Analysis = () => {
     }));
   };
 
-  const prepareBestRatedActivitiesData = () => {
+  const prepareBestRatedActivitiesData = (): BestRatedTableData[] => {
     if (!stats || !stats.bestRatedActivities) return [];
     
-    return stats.bestRatedActivities.map(activity => ({
+    return stats.bestRatedActivities.map((activity: BestRatedActivity) => ({
       id: activity.activityId,
       name: activity.activityName,
       rating: activity.averageRating || 0,
@@ -203,7 +286,7 @@ const Analysis = () => {
   };
 
   // Column definitions for tables
-  const topActivitiesColumns = [
+  const topActivitiesColumns: Column[] = [
     { id: 'name', label: 'Activity Name' },
     { id: 'participants', label: 'Participants', align: 'right' },
     { id: 'participationRate', label: 'Participation Rate', align: 'right' },
@@ -211,12 +294,20 @@ const Analysis = () => {
     { id: 'status', label: 'Status' }
   ];
 
-  const bestRatedColumns = [
+  const bestRatedColumns: Column[] = [
     { id: 'name', label: 'Activity Name' },
     { id: 'rating', label: 'Rating', align: 'center' },
     { id: 'feedbacks', label: 'Feedback Count', align: 'right' },
     { id: 'category', label: 'Category' }
   ];
+
+  const handleSelectChange = (field: keyof Filters) => (event: SelectChangeEvent<string>): void => {
+    handleFilterChange(field, event.target.value);
+  };
+
+  const handleDateChange = (field: keyof Filters) => (date: Dayjs | null): void => {
+    handleFilterChange(field, date);
+  };
 
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -238,7 +329,7 @@ const Analysis = () => {
                 id="time-period"
                 value={filters.timePeriod}
                 label="Time Period"
-                onChange={(e) => handleFilterChange('timePeriod', e.target.value)}
+                onChange={handleSelectChange('timePeriod')}
               >
                 <MenuItem value="">All Time</MenuItem>
                 <MenuItem value="DAILY">Daily</MenuItem>
@@ -256,7 +347,7 @@ const Analysis = () => {
                 id="activity-type"
                 value={filters.activityType}
                 label="Activity Type"
-                onChange={(e) => handleFilterChange('activityType', e.target.value)}
+                onChange={handleSelectChange('activityType')}
               >
                 <MenuItem value="">All Types</MenuItem>
                 <MenuItem value="WORKSHOP">Workshop</MenuItem>
@@ -276,7 +367,7 @@ const Analysis = () => {
                 id="status"
                 value={filters.status}
                 label="Status"
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                onChange={handleSelectChange('status')}
               >
                 <MenuItem value="">All Statuses</MenuItem>
                 <MenuItem value="UPCOMING">Upcoming</MenuItem>
@@ -290,14 +381,14 @@ const Analysis = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4">
             <DateTimePicker
               label="Start Date"
-              value={filters.startDate ? dayjs(filters.startDate) : null}
-              onChange={(date) => handleFilterChange('startDate', date)}
+              value={filters.startDate}
+              onChange={handleDateChange('startDate')}
               slotProps={{ textField: { fullWidth: true } }}
             />
             <DateTimePicker
               label="End Date"
-              value={filters.endDate ? dayjs(filters.endDate) : null}
-              onChange={(date) => handleFilterChange('endDate', date)}
+              value={filters.endDate}
+              onChange={handleDateChange('endDate')}
               slotProps={{ textField: { fullWidth: true } }}
             />
             <div className="flex items-center space-x-4">
@@ -327,13 +418,13 @@ const Analysis = () => {
           <div className="bg-red-100 p-4 rounded-lg">
             <p className="text-red-700">{error}</p>
           </div>
-        ) : (
+        ) : stats ? (
           <>
             {/* Organization Info */}
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-2xl font-bold">{stats.organizationName}</h2>
               <p className="text-gray-600">
-                Type: {stats.organizationType.replace(/_/g, ' ')}
+                Type: {stats.organizationType?.replace(/_/g, ' ') || 'Unknown'}
               </p>
               
               {/* Applied Filters */}
@@ -358,12 +449,12 @@ const Analysis = () => {
                     )}
                     {filters.startDate && (
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                        From: {dayjs(filters.startDate).format('YYYY-MM-DD HH:mm')}
+                        From: {filters.startDate.format('YYYY-MM-DD HH:mm')}
                       </span>
                     )}
                     {filters.endDate && (
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">
-                        To: {dayjs(filters.endDate).format('YYYY-MM-DD HH:mm')}
+                        To: {filters.endDate.format('YYYY-MM-DD HH:mm')}
                       </span>
                     )}
                   </div>
@@ -471,7 +562,7 @@ const Analysis = () => {
               </div>
             )}
           </>
-        )}
+        ) : null}
       </div>
     </LocalizationProvider>
   );
