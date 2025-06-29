@@ -1,18 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent, MouseEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { TextField, Button, Alert, Typography, Box, Paper } from '@mui/material';
-import { FaUser, FaLock, FaSignInAlt } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
 import 'tailwindcss/tailwind.css';
+import { FaSignInAlt, FaLock } from 'react-icons/fa';
 
-const Login = () => {
+interface FormData {
+  identify_code: string;
+  password: string;
+}
+
+interface LoginResponse {
+  status_code: number;
+  message?: string;
+  data?: {
+    access_token: string;
+    account: {
+      role: string;
+      [key: string]: any;
+    };
+  };
+}
+
+const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     identify_code: '',
     password: ''
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string>('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     try {
       const response = await fetch('http://localhost:8080/auth/login', {
@@ -23,9 +41,9 @@ const Login = () => {
         body: JSON.stringify(formData)
       });
 
-      const data = await response.json();
+      const data: LoginResponse = await response.json();
 
-      if (data.status_code === 200) {
+      if (data.status_code === 200 && data.data) {
         localStorage.setItem('access_token', data.data.access_token);
         localStorage.setItem('user', JSON.stringify(data.data.account));
         if (data.data.account.role === "ADMIN") navigate('/admin/dashboard');
@@ -40,7 +58,7 @@ const Login = () => {
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -63,6 +81,7 @@ const Login = () => {
         elevation={6}
         className="p-8 rounded-2xl w-full max-w-md transform transition-all duration-300 hover:scale-105 bg-white/95 backdrop-blur-sm"
       >
+        {/* @ts-ignore */}
         <Box className="flex flex-col items-center mb-6">
           <FaSignInAlt className="text-4xl text-blue-600 mb-2" />
           <Typography variant="h4" className="font-bold text-gray-800">
@@ -190,4 +209,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Login; 

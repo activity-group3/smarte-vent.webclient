@@ -1,22 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/auth.css';
 
-const Register = () => {
-  const [formData, setFormData] = useState({
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const Register: React.FC = () => {
+  const [formData, setFormData] = useState<FormData>({
     username: '',
     email: '',
     password: '',
     confirmPassword: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     // Handle registration logic here
     console.log('Register attempt:', formData);
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -64,4 +71,4 @@ const Register = () => {
   );
 };
 
-export default Register;
+export default Register; 

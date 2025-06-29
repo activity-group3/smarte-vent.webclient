@@ -174,7 +174,7 @@ const getRoleColor = (role: string): "primary" | "info" | "default" => {
   }
 };
 
-const OrganizationParticipantManagement: React.FC = () => {
+export default function OrganizationParticipantManagement() {
   const { id } = useParams<{ id: string }>();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [page, setPage] = useState<number>(0);

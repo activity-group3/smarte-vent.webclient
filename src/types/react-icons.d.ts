@@ -52,4 +52,6 @@ declare module 'react-icons/fa' {
   export const FaCheck: IconType;
   export const FaUserCheck: IconType;
   export const FaUserShield: IconType;
+  export const FaSignInAlt: IconType;
+  export const FaLock: IconType;
 } 
