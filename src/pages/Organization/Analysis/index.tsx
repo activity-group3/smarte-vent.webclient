@@ -30,7 +30,7 @@ import DataTable from '../../../components/charts/DataTable';
 
 // Import service
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
-import { account } from '@/context/user';
+import { useAuth } from '../../../hooks/useAuth';
 
 // Type definitions
 interface OrganizationStatistics {
@@ -116,6 +116,7 @@ interface Column {
 
 const Analysis: React.FC = () => {
   const { organizationId } = useParams<{ organizationId?: string }>();
+  const { user } = useAuth();
   const [stats, setStats] = useState<OrganizationStatistics | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -135,8 +136,11 @@ const Analysis: React.FC = () => {
       setLoading(true);
       try {
         // Default to an organization ID if not provided in the URL
-        const orgId = organizationId || account.id;
-        const data = await organizationStatisticsService.getOrganizationStatistics(orgId);
+        const orgId = organizationId || user?.id;
+        if (!orgId) {
+          throw new Error('Organization ID is required');
+        }
+        const data = await organizationStatisticsService.getOrganizationStatistics(parseInt(orgId));
         setStats(data as OrganizationStatistics);
         setError(null);
       } catch (err) {
@@ -163,7 +167,10 @@ const Analysis: React.FC = () => {
     setLoading(true);
     try {
       // Default to an organization ID if not provided in the URL
-      const orgId = organizationId || account.id;
+      const orgId = organizationId || user?.id;
+      if (!orgId) {
+        throw new Error('Organization ID is required');
+      }
       
       // Convert dates to ISO strings if they exist
       const filterData = {
@@ -175,14 +182,14 @@ const Analysis: React.FC = () => {
       // If we have specific date range but no time period
       if ((filterData.startDate || filterData.endDate) && !filterData.timePeriod) {
         const data = await organizationStatisticsService.getDateRangeStatistics(
-          orgId, 
+          parseInt(orgId), 
           filterData.startDate, 
           filterData.endDate
         );
         setStats(data);
       } else {
         // Use the filter endpoint
-        const data = await organizationStatisticsService.getFilteredOrganizationStatistics(orgId, filterData);
+        const data = await organizationStatisticsService.getFilteredOrganizationStatistics(parseInt(orgId), filterData);
         setStats(data);
       }
       
@@ -208,8 +215,11 @@ const Analysis: React.FC = () => {
     // Reload initial data
     setLoading(true);
     try {
-      const orgId = organizationId || account.id;
-      const data = await organizationStatisticsService.getOrganizationStatistics(orgId);
+      const orgId = organizationId || user?.id;
+      if (!orgId) {
+        throw new Error('Organization ID is required');
+      }
+      const data = await organizationStatisticsService.getOrganizationStatistics(parseInt(orgId));
       setStats(data);
       setError(null);
     } catch (err) {

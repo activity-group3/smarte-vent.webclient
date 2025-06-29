@@ -35,10 +35,11 @@ import DataTable from '../../../components/charts/DataTable';
 
 // Import service
 import { studentStatisticsService } from '../../../services/studentStatisticsService';
-import { account } from '@/context/user';
+import { useAuth } from '../../../hooks/useAuth';
 import { StudentStats } from '@/types/entities';
 
 const Analysis = () => {
+    const { user } = useAuth();
     const [studentId, setStudentId] = useState<string | null>(null); // For viewing specific student's stats (admin/manager only)
     const [stats, setStats] = useState<StudentStats | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
@@ -56,7 +57,7 @@ const Analysis = () => {
 
     // Initial load of stats
     useEffect(() => {
-        setStudentId(account.id);
+        setStudentId(user?.id || null);
         const fetchInitialData = async () => {
             setLoading(true);
             try {

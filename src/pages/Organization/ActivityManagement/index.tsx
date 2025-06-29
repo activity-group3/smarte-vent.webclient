@@ -40,7 +40,7 @@ import {
   FaCheck,
   FaChartBar,
 } from "react-icons/fa";
-import { account } from "@/context/user";
+import { useAuth } from "../../../hooks/useAuth";
 import ActivityUpdateForm from '@/components/ActivityUpdateForm';
 import ActivityStatisticsModal from '@/components/ActivityStatisticsModal';
 import activityStatisticsService from '@/services/activityStatisticsService';
@@ -134,6 +134,7 @@ interface Account {
 
 const OrganizationActivityManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(0);
@@ -216,7 +217,7 @@ const OrganizationActivityManagement: React.FC = () => {
       }
 
       const response = await fetch(
-        `http://localhost:8080/activities/search?${queryString}&organizationId=${account.id}`,
+        `http://localhost:8080/activities/search?${queryString}&organizationId=${user?.id}`,
         {
           method: "GET",
           headers: {

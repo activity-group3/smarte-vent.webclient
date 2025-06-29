@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from 'date-fns';
-import { account } from "@/context/user";
+import { useAuth } from "../../../hooks/useAuth";
 
 // Material-UI Components
 import {
@@ -70,6 +70,7 @@ interface ParticipationDetails {
 const ActivityDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activity, setActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,7 +79,7 @@ const ActivityDetail = () => {
   const [participationRole, setParticipationRole] = useState("PARTICIPANT");
   const [openJoinDialog, setOpenJoinDialog] = useState<boolean>(false);
   const [isParticipating, setIsParticipating] = useState<boolean>(false);
-  const [participationId, setParticipationId] = useState<string | null>(account.id);
+  const [participationId, setParticipationId] = useState<string | null>(user?.id || null);
   const [openFeedbackDialog, setOpenFeedbackDialog] = useState<boolean>(false);
   const [participantStatus, setParticipantStatus] = useState<string | null>(null);
   const [feedbackData, setFeedbackData] = useState({

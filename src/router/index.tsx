@@ -29,30 +29,11 @@ import OrganizationDashboard from "../pages/Organization/Dashboard";
 import OrganizationParticipantManagement from "../pages/Organization/ParticipantManagement";
 import OrganizationActivityDetail from "../pages/Organization/ActivityDetail";
 import StudentAnalysis from "../pages/user/Analysis";
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: "ADMIN" | "ORGANIZATION" | "STUDENT";
-  organization_name?: string;
-}
-
-const checkAdminRole = (): boolean => {
-  const userData = localStorage.getItem("user");
-  if (!userData) return false;
-  const user: User = JSON.parse(userData);
-  return user.role === "ADMIN";
-};
-
-const checkOrganizationRole = (): boolean => {
-  const userData = localStorage.getItem("user");
-  if (!userData) return false;
-  const user: User = JSON.parse(userData);
-  return user.role === "ORGANIZATION";
-};
+import { useRoleAuth } from "../hooks/useAuth";
 
 const Router: React.FC = () => {
+  const { checkAdminRole, checkOrganizationRole } = useRoleAuth();
+  
   const routes = useRoutes([
     {
       path: "/",

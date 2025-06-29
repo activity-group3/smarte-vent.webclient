@@ -9,20 +9,23 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { getTheme } from "./theme";
 import useMediaQuery from "@mui/material/useMediaQuery";
 import { useMemo } from "react";
+import { AuthProvider } from "./hooks/useAuth";
 
 const App = () => {
   const prefersDarkMode = useMediaQuery("(prefers-color-scheme: dark)");
   const theme = useMemo(() => getTheme(prefersDarkMode ? "dark" : "light"), [prefersDarkMode]);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <BrowserRouter>
-          <Router />
-        </BrowserRouter>
-      </LocalizationProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LocalizationProvider dateAdapter={AdapterDateFns}>
+          <BrowserRouter>
+            <Router />
+          </BrowserRouter>
+        </LocalizationProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 };
 

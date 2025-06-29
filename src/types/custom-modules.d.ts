@@ -1,11 +1,5 @@
 // Declarations for custom module paths without TypeScript types
 
-declare module '@/context/user' {
-  export const account: any;
-  const _default: any;
-  export default _default;
-}
-
 declare module '@/components/LocationMap' {
   import { ComponentType } from 'react';
   const LocationMap: ComponentType<any>;
