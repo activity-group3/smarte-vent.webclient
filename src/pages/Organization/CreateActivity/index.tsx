@@ -1,9 +1,6 @@
 import React from 'react';
 import CreateActivity from '../../admin/CreateActivity';
-
-interface OrganizationCreateActivityProps {
-  // You can extend props in future if needed
-}
+import { OrganizationCreateActivityProps } from '@/types/componentProps';
 
 const OrganizationCreateActivity: React.FC<OrganizationCreateActivityProps> = () => {
   return <CreateActivity />;

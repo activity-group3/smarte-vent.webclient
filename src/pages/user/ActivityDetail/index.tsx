@@ -53,19 +53,10 @@ import {
   FaStar
 } from "react-icons/fa";
 import { Activity } from '@/types/entities';
+import { ParticipationDetails, FeedbackData } from '@/types/activityDetail';
 
 // Lazy load the LocationMap component
 const LocationMap = lazy(() => import('@/components/LocationMap'));
-
-interface ParticipationDetails {
-  status: string | null;
-  role: string | null;
-  registered_at: number | null;
-  processed_at: number | null;
-  processed_by: string | null;
-  rejection_reason: string | null;
-  verified_note: string | null;
-}
 
 const ActivityDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -82,7 +73,7 @@ const ActivityDetail = () => {
   const [participationId, setParticipationId] = useState<string | null>(user?.id || null);
   const [openFeedbackDialog, setOpenFeedbackDialog] = useState<boolean>(false);
   const [participantStatus, setParticipantStatus] = useState<string | null>(null);
-  const [feedbackData, setFeedbackData] = useState({
+  const [feedbackData, setFeedbackData] = useState<FeedbackData>({
     rating: 0, // 0-10 scale
     feedback_description: ''
   });

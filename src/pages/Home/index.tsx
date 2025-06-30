@@ -28,27 +28,9 @@ import {
   Stars,
 } from "@mui/icons-material";
 import type { Mesh } from "three";
+import { Feature, Step, Testimonial } from '@/types/ui';
 
 /* --------- Utils & Types --------- */
-
-interface Feature {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}
-
-interface Step {
-  icon: React.ReactNode;
-  title: string;
-  text: string;
-}
-
-interface Testimonial {
-  name: string;
-  role: string;
-  avatar: string;
-  quote: string;
-}
 
 /* --------- Floating Sphere --------- */
 

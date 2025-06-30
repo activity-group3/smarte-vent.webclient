@@ -4,27 +4,11 @@ import { TextField, Button, Alert, Typography, Box, Paper } from '@mui/material'
 import { FaUser } from 'react-icons/fa';
 import 'tailwindcss/tailwind.css';
 import { FaSignInAlt, FaLock } from 'react-icons/fa';
-
-interface FormData {
-  identify_code: string;
-  password: string;
-}
-
-interface LoginResponse {
-  status_code: number;
-  message?: string;
-  data?: {
-    access_token: string;
-    account: {
-      role: string;
-      [key: string]: any;
-    };
-  };
-}
+import { LoginForm, LoginResponse } from '@/types/auth';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<LoginForm>({
     identify_code: '',
     password: ''
   });

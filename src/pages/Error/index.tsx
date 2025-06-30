@@ -1,13 +1,7 @@
 import React from 'react';
 import { Link, useRouteError } from 'react-router-dom';
 import './error.css';
-
-interface RouteError {
-  message?: string;
-  status?: number;
-  statusText?: string;
-  data?: any;
-}
+import { RouteError } from '@/types/ui';
 
 const ErrorPage: React.FC = () => {
   const error = useRouteError() as RouteError;

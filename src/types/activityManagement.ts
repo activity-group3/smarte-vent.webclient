@@ -1,16 +1,4 @@
-export enum ActivityStatus {
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  PUBLISHED = "PUBLISHED",
-  CANCELLED = "CANCELLED",
-  PENDING = "PENDING",
-}
-
-export enum ActivityCategory {
-  THIRD_PARTY = "THIRD_PARTY",
-  UNIVERSITY = "UNIVERSITY",
-  STUDENT_ORGANIZATION = "STUDENT_ORGANIZATION",
-}
+import { ActivityStatus, ActivityCategory } from './entities';
 
 export interface Activity {
   id: number;

@@ -14,24 +14,12 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import { useLocation } from 'react-router-dom';
-
-interface User {
-  id?: string;
-  name?: string;
-  email?: string;
-  role?: "ADMIN" | "ORGANIZATION" | "STUDENT";
-  organization_name?: string;
-}
+import { User, SidebarProps } from '@/types/auth';
 
 interface NavItem {
   name: string;
   icon: React.ReactNode;
   path: string;
-}
-
-interface SidebarProps {
-  Uprising?: any; // You might want to define this type based on what Uprising is
-  onLogout: () => void;
 }
 
 export function Sidebar({ Uprising, onLogout }: SidebarProps) {

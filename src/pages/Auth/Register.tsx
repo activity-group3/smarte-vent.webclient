@@ -1,16 +1,10 @@
 import React, { useState, ChangeEvent, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import '../styles/auth.css';
-
-interface FormData {
-  username: string;
-  email: string;
-  password: string;
-  confirmPassword: string;
-}
+import { RegisterForm as RegisterFormType } from '@/types/auth';
 
 const Register: React.FC = () => {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState<RegisterFormType>({
     username: '',
     email: '',
     password: '',

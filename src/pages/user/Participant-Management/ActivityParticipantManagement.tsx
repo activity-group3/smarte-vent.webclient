@@ -32,12 +32,7 @@ import {
 import { Close as CloseIcon, Check as CheckIcon, Clear as ClearIcon, Schedule as ScheduleIcon, LocationOn as LocationIcon } from '@mui/icons-material';
 import './activityDetail.css';
 import { Activity, Participant, ParticipationStatus, ActivitySchedule } from '@/types/entities';
-
-interface ActivityParticipantManagementProps {
-  activityId: string;
-  open?: boolean;
-  onClose: () => void;
-}
+import { ActivityParticipantManagementProps } from '@/types/activityDetail';
 
 const ActivityParticipantManagement: React.FC<ActivityParticipantManagementProps> = ({ activityId, open = true, onClose }) => {
   const theme = useTheme();
