@@ -1,10 +1,10 @@
-# Matcha Web Client
+# CampusHub
 
 A comprehensive student activity management platform built with React, TypeScript, and modern web technologies. This application provides role-based interfaces for administrators, organizations, and students to manage, participate in, and analyze educational activities.
 
 ## 🎯 Overview
 
-Matcha Web Client is a full-featured web application designed to streamline student activity management in educational institutions. The platform supports three distinct user roles with specialized dashboards and functionality tailored to their specific needs.
+CampusHub is a full-featured web application designed to streamline student activity management in educational institutions. The platform supports three distinct user roles with specialized dashboards and functionality tailored to their specific needs.
 
 ### Key Features
 
@@ -120,7 +120,7 @@ src/
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd matcha-web-client
+   cd CampusHub
    ```
 
 2. **Install dependencies**
