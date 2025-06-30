@@ -22,81 +22,19 @@ import DataTable from '../../../components/charts/DataTable';
 // Import service
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
 
-// Type definitions
-interface OrganizationStats {
-  organizationName: string;
-  organizationType: string;
-  totalActivities: number;
-  totalParticipants: number;
-  participationRate: number;
-  averageFeedbackRating: number;
-  upcomingActivities: number;
-  inProgressActivities: number;
-  completedActivities: number;
-  canceledActivities: number;
-  activitiesByCategory: Record<string, number>;
-  activitiesByMonth: Record<string, number>;
-  participantsByMonth: Record<string, number>;
-  topActivities: TopActivity[];
-  bestRatedActivities?: BestRatedActivity[];
-}
-
-interface TopActivity {
-  activityId: number;
-  activityName: string;
-  currentParticipants: number;
-  category: string;
-  status: string;
-}
-
-interface BestRatedActivity {
-  activityId: number;
-  activityName: string;
-  averageRating: number;
-  feedbackCount: number;
-  category: string;
-}
-
-interface ChartDataItem {
-  name: string;
-  value: number;
-}
-
-interface MonthlyDataItem {
-  name: string;
-  activities: number;
-  participants: number;
-}
-
-interface TopActivityTableItem {
-  id: number;
-  name: string;
-  participants: number;
-  category: string;
-  status: string;
-}
-
-interface BestRatedTableItem {
-  id: number;
-  name: string;
-  rating: number;
-  feedbacks: number;
-  category: string;
-}
-
-interface TableColumn {
-  id: string;
-  label: string;
-  align?: 'left' | 'right' | 'center';
-}
-
-type TimePeriod = 'all' | 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
-
-interface LineChartLine {
-  dataKey: string;
-  name: string;
-  color: string;
-}
+// Import types
+import {
+  OrganizationStats,
+  TopActivity,
+  BestRatedActivity,
+  ChartDataItem,
+  MonthlyDataItem,
+  TopActivityTableItem,
+  BestRatedTableItem,
+  TableColumn,
+  TimePeriod,
+  LineChartLine,
+} from '@/types/organizationDashboard';
 
 const Dashboard: React.FC = () => {
   const { organizationId } = useParams<{ organizationId: string }>();

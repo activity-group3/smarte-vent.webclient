@@ -51,104 +51,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-enum ParticipationStatus {
-  UNVERIFIED = "UNVERIFIED",
-  VERIFIED = "VERIFIED",
-  REJECTED = "REJECTED",
-}
-
-enum ParticipationRole {
-  PARTICIPANT = "PARTICIPANT",
-  CONTRIBUTOR = "CONTRIBUTOR",
-}
-
-enum SortFields {
-  REGISTRATION_TIME = "registeredAt",
-  IDENTIFY_CODE = "identifyCode",
-  PARTICIPANT_NAME = "participantName",
-  START_DATE = "startDate",
-  END_DATE = "endDate",
-}
-
-type SortDirection = "asc" | "desc";
-
-interface Participant {
-  id: number;
-  identify_code: string;
-  participant_name: string;
-  start_date: string;
-  end_date: string;
-  registration_time: string;
-  participation_status: ParticipationStatus;
-  participation_role: ParticipationRole;
-  processed_at?: string;
-  processed_by?: string;
-  rejection_reason?: string;
-  verified_note?: string;
-}
-
-interface Filters {
-  participationStatus: string;
-  participationRole: string;
-  registeredAfter: string;
-  registeredBefore: string;
-  identifyCode: string;
-  participantName: string;
-}
-
-interface Sorting {
-  field: SortFields;
-  direction: SortDirection;
-}
-
-interface VerificationModal {
-  open: boolean;
-  participantId: number | null;
-  status: ParticipationStatus | null;
-  rejection_reason: string;
-  verified_note: string;
-}
-
-interface DetailLogModal {
-  open: boolean;
-  participant: Participant | null;
-  loading: boolean;
-  error: string | null;
-}
-
-interface ActivityDetails {
-  id: number;
-  name: string;
-  category: string;
-  venue: string;
-  status: string;
-  start_date: string;
-  end_date: string;
-}
-
-interface Feedback {
-  id: number;
-  rating: number;
-  comment: string;
-  participant_name: string;
-  created_at: string;
-}
-
-interface ApiResponse<T> {
-  status_code: number;
-  data: T;
-}
-
-interface ParticipantsResponse {
-  results: Participant[];
-  total_pages: number;
-}
-
-interface ActionButtonsProps {
-  participant: Participant;
-  onVerify: (participantId: number, status: ParticipationStatus) => void;
-  onRemove: (participantId: number) => void;
-}
+import {
+  ParticipationStatus,
+  ParticipationRole,
+  SortFields,
+  Participant,
+  Filters,
+  Sorting,
+  VerificationModal,
+  DetailLogModal,
+  ActivityDetails,
+  Feedback,
+  ApiResponse,
+  ParticipantsResponse,
+  ActionButtonsProps,
+  SortDirection,
+} from "@/types/participantManagement";
 
 const getStatusColor = (status: string): "success" | "warning" | "error" | "default" => {
   switch (status) {

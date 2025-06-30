@@ -19,6 +19,12 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
+import {
+  OrganizationType,
+  Organization,
+  SearchParams,
+} from '@/types/organizationList';
+
 const StyledTableContainer = styled(TableContainer)(({ theme }) => ({
   boxShadow: theme.shadows[4],
   borderRadius: theme.shape.borderRadius,
@@ -30,29 +36,6 @@ const StyledTableCell = styled(TableCell)(({ theme }) => ({
   backgroundColor: theme.palette.primary.main,
   color: theme.palette.common.white,
 }));
-
-const OrganizationType = {
-  CLUB: 'CLUB',
-  COMPANY: 'COMPANY',
-  GOVERNMENT: 'GOVERNMENT',
-  EDUCATIONAL: 'EDUCATIONAL',
-} as const;
-
-type OrganizationTypeKey = keyof typeof OrganizationType;
-
-interface Organization {
-  id: number;
-  organization_name: string;
-  organization_type: string;
-  representative_phone: string;
-  representative_email: string;
-}
-
-interface SearchParams {
-  name: string;
-  organizationType: string;
-  size: number;
-}
 
 const OrganizationList: React.FC = () => {
   const [organizations, setOrganizations] = useState<Organization[]>([]);

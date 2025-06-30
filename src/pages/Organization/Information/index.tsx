@@ -1,4 +1,5 @@
 import React, { useState, useEffect, ChangeEvent, FormEvent } from 'react';
+import { OrganizationInfo } from '@/types/organizationInformation';
 import {
   Box,
   Paper,
@@ -14,14 +15,6 @@ import {
   SelectChangeEvent,
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
-
-interface OrganizationInfo {
-  id: string | undefined;
-  organization_name: string;
-  organization_type: string;
-  representative_email: string;
-  representative_phone: string;
-}
 
 const OrganizationInformation: React.FC = () => {
   const { id } = useParams<{ id: string }>();

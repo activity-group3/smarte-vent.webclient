@@ -32,87 +32,18 @@ import DataTable from '../../../components/charts/DataTable';
 import { organizationStatisticsService } from '../../../services/organizationStatisticsService';
 import { useAuth } from '../../../hooks/useAuth';
 
-// Type definitions
-interface OrganizationStatistics {
-  organizationName?: string;
-  organizationType?: string;
-  totalActivities?: number;
-  totalParticipants?: number;
-  averageParticipantsPerActivity?: number;
-  participationRate?: number;
-  averageFeedbackRating?: number;
-  totalFeedbacks?: number;
-  upcomingActivities?: number;
-  inProgressActivities?: number;
-  completedActivities?: number;
-  canceledActivities?: number;
-  activitiesByCategory?: Record<string, number>;
-  participantsByCategory?: Record<string, number>;
-  activitiesByMonth?: Record<string, number>;
-  participantsByMonth?: Record<string, number>;
-  topActivities?: TopActivity[];
-  bestRatedActivities?: BestRatedActivity[];
-  [key: string]: any; // Allow for additional properties
-}
-
-interface TopActivity {
-  activityId: number;
-  activityName: string;
-  currentParticipants: number;
-  category: string;
-  status: string;
-  participationRate: number;
-}
-
-interface BestRatedActivity {
-  activityId: number;
-  activityName: string;
-  averageRating: number;
-  feedbackCount: number;
-  category: string;
-}
-
-interface Filters {
-  timePeriod: string;
-  activityType: string;
-  status: string;
-  startDate: Dayjs | null;
-  endDate: Dayjs | null;
-}
-
-interface ChartData {
-  name: string;
-  value: number;
-}
-
-interface MonthlyData {
-  name: string;
-  activities: number;
-  participants: number;
-}
-
-interface TopActivityTableData {
-  id: number;
-  name: string;
-  participants: number;
-  category: string;
-  status: string;
-  participationRate: string;
-}
-
-interface BestRatedTableData {
-  id: number;
-  name: string;
-  rating: number;
-  feedbacks: number;
-  category: string;
-}
-
-interface Column {
-  id: string;
-  label: string;
-  align?: 'left' | 'center' | 'right';
-}
+// Import organizationAnalysis types
+import {
+  OrganizationStatistics,
+  TopActivity,
+  BestRatedActivity,
+  Filters,
+  ChartData,
+  MonthlyData,
+  TopActivityTableData,
+  BestRatedTableData,
+  Column,
+} from '@/types/organizationAnalysis';
 
 const Analysis: React.FC = () => {
   const { organizationId } = useParams<{ organizationId?: string }>();
