@@ -6,7 +6,7 @@ interface UseTableActionsProps {
   deleteMessage?: string;
 }
 
-interface UseTableActionsReturn<T> {
+type UseTableActionsReturn<T> = {
   loading: boolean;
   error: string | null;
   // CRUD operations

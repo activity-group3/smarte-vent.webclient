@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react';
 
 type ValidationRule<T> = (value: T) => string | null;
 
-interface ValidationRules<T extends Record<string, any>> {
+type ValidationRules<T extends Record<string, any>> = {
   [K in keyof T]?: ValidationRule<T[K]>[];
-}
+};
 
 interface UseFormValidationProps<T extends Record<string, any>> {
   initialValues: T;
