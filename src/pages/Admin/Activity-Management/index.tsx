@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Table,
   TableBody,
@@ -30,9 +30,6 @@ import {
   Cancel as DisapproveIcon,
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
-import "tailwindcss/tailwind.css";
-import { SelectChangeEvent } from "@mui/material/Select";
-
 import {
   FaSearch,
   FaFilter,
@@ -41,76 +38,19 @@ import {
   FaCheck,
 } from "react-icons/fa";
 import ActivityUpdateForm from "@/components/ActivityUpdateForm";
+import { useApiData, useModal, useTableActions } from "@/hooks";
+import type { Activity, ActivityFilters, SortField } from "@/types/activityManagement";
+import { ActivityStatus, ActivityCategory } from "@/types/activityManagement";
 
-// The MUI DateTimePicker v6 typings are incompatible with the older `renderInput` prop
-// pattern used in this file. To avoid extensive refactors right now, we cast the
-// component to `any`, so TypeScript will not complain about the additional props.
-// This keeps the runtime behaviour unchanged while restoring type-safety elsewhere.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const MuiDateTimePicker: any = DateTimePicker;
-
-const ActivityStatus = {
-  IN_PROGRESS: "IN_PROGRESS",
-  COMPLETED: "COMPLETED",
-  PUBLISHED: "PUBLISHED",
-  CANCELLED: "CANCELLED",
-  PENDING: "PENDING",
-};
-
-const ActivityCategory = {
-  THIRD_PARTY: "THIRD_PARTY",
-  UNIVERSITY: "UNIVERSITY",
-  // DEPARTMENT: "DEPARTMENT",
-  STUDENT_ORGANIZATION: "STUDENT_ORGANIZATION",
-};
-
-const SortFields = {
-  START_DATE: "startDate",
-  END_DATE: "endDate",
-  ACTIVITY_NAME: "activityName",
-  ACTIVITY_STATUS: "activityStatus",
-  ACTIVITY_CATEGORY: "activityCategory",
-};
-
-interface Activity {
-  id: number;
-  activity_name: string;
-  activity_category: string;
-  activity_venue: string;
-  start_date: string;
-  end_date: string;
-  activity_status: string;
-  capacity_limit: number;
-  current_participants: number;
-  is_approved: boolean;
-}
-
-interface Filters {
-  activity_name: string;
-  status: string | null;
-  activity_category: string | null;
-  startDateFrom: Date | null;
-  startDateTo: Date | null;
-  endDateFrom: Date | null;
-  endDateTo: Date | null;
-  min_attendance_score_unit: string;
-  max_attendance_score_unit: string;
-  min_capacity_limit: string;
-  max_capacity_limit: string;
-  activity_venue: string;
-  fee: string;
-  registration_deadline: Date | null;
-}
-
-const AdminActivityManage: React.FC = () => {
+const AdminActivityManageRefactored: React.FC = () => {
   const navigate = useNavigate();
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [page, setPage] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
-  const [filters, setFilters] = useState<Filters>({
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Initialize filters
+  const initialFilters: ActivityFilters = {
     activity_name: "",
-    status: null, // Default to no status filter, admin can see all
-    activity_category: null, // Changed from category
+    status: "",
+    activity_category: "",
     startDateFrom: null,
     startDateTo: null,
     endDateFrom: null,
@@ -122,144 +62,38 @@ const AdminActivityManage: React.FC = () => {
     activity_venue: "",
     fee: "",
     registration_deadline: null,
+  };
+
+  // Use hooks
+  const {
+    data: activities,
+    loading,
+    error,
+    pagination,
+    sorting,
+    filters,
+    refetch,
+    handlePageChange,
+    handleSortChange,
+    updateFilter,
+    resetFilters,
+    handleInputChange,
+    handleSelectChange,
+    handleDateChange,
+  } = useApiData<Activity, ActivityFilters, SortField>({
+    endpoint: "http://localhost:8080/activities/search",
+    initialFilters,
+    initialSortField: "startDate",
+    initialSortDirection: "desc",
+    initialPageSize: 20,
   });
 
-  const [sorting, setSorting] = useState({
-    field: SortFields.START_DATE,
-    direction: "desc",
-  });
-  const [showFilters, setShowFilters] = useState(false);
-  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(
-    null
-  );
-  const [showUpdateForm, setShowUpdateForm] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const updateModal = useModal<Activity>();
+  const tableActions = useTableActions<Activity>({ onRefresh: refetch });
 
-  const handleSortChange = (field: string) => {
-    setSorting((prev) => ({
-      field,
-      direction:
-        prev.field === field && prev.direction === "asc" ? "desc" : "asc",
-    }));
-    setPage(0);
-  };
-
-  const fetchActivities = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("access_token");
-      let queryString = `page=${page}&size=20&sort=${sorting.field},${sorting.direction}`;
-
-      // Add filters if they exist
-      if (filters.activity_name) {
-        queryString += `&activityName=${encodeURIComponent(
-          filters.activity_name
-        )}`;
-      }
-      if (filters.status) {
-        queryString += `&activityStatus=${filters.status}`;
-      }
-      if (filters.activity_category) {
-        queryString += `&activityCategory=${filters.activity_category}`;
-      }
-      if (filters.startDateFrom) {
-        queryString += `&startDateFrom=${filters.startDateFrom.toISOString()}`;
-      }
-      if (filters.startDateTo) {
-        queryString += `&startDateTo=${filters.startDateTo.toISOString()}`;
-      }
-      if (filters.endDateFrom) {
-        queryString += `&endDateFrom=${filters.endDateFrom.toISOString()}`;
-      }
-      if (filters.endDateTo) {
-        queryString += `&endDateTo=${filters.endDateTo.toISOString()}`;
-      }
-      if (filters.min_attendance_score_unit) {
-        queryString += `&minAttendanceScoreUnit=${filters.min_attendance_score_unit}`;
-      }
-      if (filters.max_attendance_score_unit) {
-        queryString += `&maxAttendanceScoreUnit=${filters.max_attendance_score_unit}`;
-      }
-      if (filters.min_capacity_limit) {
-        queryString += `&minCapacityLimit=${filters.min_capacity_limit}`;
-      }
-      if (filters.max_capacity_limit) {
-        queryString += `&maxCapacityLimit=${filters.max_capacity_limit}`;
-      }
-      if (filters.activity_venue) {
-        queryString += `&activityVenue=${encodeURIComponent(
-          filters.activity_venue
-        )}`;
-      }
-      if (filters.fee) {
-        queryString += `&fee=${filters.fee}`;
-      }
-      if (filters.registration_deadline) {
-        queryString += `&registrationDeadline=${filters.registration_deadline.toISOString()}`;
-      }
-
-      console.log(
-        "AdminActivityManage: Fetching activities with query:",
-        queryString
-      );
-
-      const response = await fetch(
-        `http://localhost:8080/activities/search?${queryString}`,
-        {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-      if (data.status_code === 200 && data.data) {
-        setActivities(data.data.results);
-        setTotalPages(data.data.total_pages);
-      } else {
-        console.error(
-          "Error fetching activities:",
-          data.message || "Unknown error"
-        );
-        setActivities([]);
-        setTotalPages(0);
-      }
-    } catch (error) {
-      console.error("Error fetching activities:", error);
-      setActivities([]);
-      setTotalPages(0);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchActivities();
-  }, [page, filters, sorting]);
-
-  const handlePageChange = (_event: unknown, value: number) => {
-    setPage(value - 1);
-  };
-
-  const handleFilterChange =
-    (field: keyof Filters) =>
-    (
-      event:
-        | React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-        | SelectChangeEvent<unknown>
-    ) => {
-      setFilters((prev) => ({
-        ...prev,
-        [field]: event.target.value,
-      }));
-      setPage(0);
-    };
-
+  // Event handlers
   const handleEdit = async (activityId: number) => {
     try {
-      setLoading(true);
       const token = localStorage.getItem("access_token");
       const response = await fetch(
         `http://localhost:8080/activities/${activityId}`,
@@ -274,42 +108,10 @@ const AdminActivityManage: React.FC = () => {
 
       const data = await response.json();
       if (data.status_code === 200) {
-        // Set the full activity data with schedules
-        setSelectedActivity(data.data);
-        setShowUpdateForm(true);
-      } else {
-        console.error("Error fetching activity details:", data.message);
+        updateModal.open(data.data);
       }
     } catch (error) {
       console.error("Error fetching activity details:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemove = async (activityId: number) => {
-    if (window.confirm("Are you sure you want to remove this activity?")) {
-      try {
-        const token = localStorage.getItem("access_token");
-        const response = await fetch(
-          `http://localhost:8080/activities/${activityId}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          }
-        );
-
-        if (response.ok) {
-          setActivities(
-            activities.filter((activity) => activity.id !== activityId)
-          );
-        }
-      } catch (error) {
-        console.error("Error removing activity:", error);
-      }
     }
   };
 
@@ -317,35 +119,35 @@ const AdminActivityManage: React.FC = () => {
     activityId: number,
     currentApprovalStatus: boolean
   ) => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const endpoint = currentApprovalStatus ? "disapprove" : "approve";
+    const endpoint = currentApprovalStatus 
+      ? `http://localhost:8080/activities/${activityId}/disapprove`
+      : `http://localhost:8080/activities/${activityId}/approve`;
+    
+    await tableActions.handleApiCall(endpoint, 'POST');
+  };
 
-      const response = await fetch(
-        `http://localhost:8080/activities/${activityId}/${endpoint}`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+  const handleRemove = async (activityId: number) => {
+    await tableActions.handleDelete(
+      `http://localhost:8080/activities/${activityId}`,
+      activityId
+    );
+  };
 
-      if (response.ok) {
-        // Refresh the activities list
-        fetchActivities();
-      }
-    } catch (error) {
-      console.error(
-        `Error ${
-          currentApprovalStatus ? "disapproving" : "approving"
-        } activity:`,
-        error
-      );
+  const handleUpdateSuccess = async (updatedActivity: unknown) => {
+    const success = await tableActions.handleUpdate(
+      "http://localhost:8080/activities/update",
+      updatedActivity
+    );
+    if (success) {
+      updateModal.close();
     }
   };
 
+  const handleRowClick = (activityId: number) => {
+    navigate(`/admin/activities/${activityId}`);
+  };
+
+  // Utility functions
   const getStatusColor = (status: string) => {
     switch (status) {
       case ActivityStatus.PENDING:
@@ -369,8 +171,6 @@ const AdminActivityManage: React.FC = () => {
         return "secondary";
       case "UNIVERSITY":
         return "primary";
-      // case "DEPARTMENT":
-      //   return "info";
       case "STUDENT_ORGANIZATION":
         return "success";
       default:
@@ -383,40 +183,14 @@ const AdminActivityManage: React.FC = () => {
     return new Date(dateString).toLocaleString();
   };
 
-  const handleRowClick = (activityId: number) => {
-    navigate(`/admin/activities/${activityId}`);
-  };
-
-  const handleUpdateSuccess = async (updatedActivity: Activity) => {
-    try {
-      const token = localStorage.getItem("access_token");
-      const response = await fetch("http://localhost:8080/activities/update", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(updatedActivity),
-      });
-
-      const data = await response.json();
-      if (data.status_code === 200) {
-        // Close the form and refresh the activity list
-        setShowUpdateForm(false);
-        setSelectedActivity(null);
-        fetchActivities();
-      } else {
-        console.error("Error updating activity:", data.message);
-      }
-    } catch (error) {
-      console.error("Error updating activity:", error);
-    }
-  };
-
-  const handleUpdateCancel = () => {
-    setShowUpdateForm(false);
-    setSelectedActivity(null);
-  };
+  if (loading && activities.length === 0) {
+    return (
+      //@ts-ignore
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </Box>
+    );
+  }
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -430,21 +204,22 @@ const AdminActivityManage: React.FC = () => {
             </div>
           </div>
         </header>
-        {/* @ts-ignore */}
+
         <Box className="p-6 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen">
-          {showUpdateForm ? (
+          {updateModal.isOpen ? (
             <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6">
               <Typography variant="h5" className="mb-6">
                 Update Activity
               </Typography>
               <ActivityUpdateForm
-                activity={selectedActivity as any}
-                onSubmit={handleUpdateSuccess as any}
-                onCancel={handleUpdateCancel}
+                activity={updateModal.data}
+                onSubmit={handleUpdateSuccess}
+                onCancel={updateModal.close}
               />
             </div>
           ) : (
             <>
+              {/* Statistics Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                 <div className="bg-gradient-to-r from-violet-500 to-purple-500 rounded-2xl p-6 text-white shadow-lg transform transition-all duration-300 hover:scale-105 hover:shadow-xl">
                   <div className="flex justify-between items-center mb-4">
@@ -464,11 +239,7 @@ const AdminActivityManage: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-4xl font-bold">
-                    {
-                      activities.filter(
-                        (a) => a.activity_status === "IN_PROGRESS"
-                      ).length
-                    }
+                    {activities.filter((a) => a.activity_status === "IN_PROGRESS").length}
                   </p>
                 </div>
 
@@ -480,18 +251,15 @@ const AdminActivityManage: React.FC = () => {
                     </div>
                   </div>
                   <p className="text-4xl font-bold">
-                    {
-                      activities.filter(
-                        (a) => a.activity_status === "COMPLETED"
-                      ).length
-                    }
+                    {activities.filter((a) => a.activity_status === "COMPLETED").length}
                   </p>
                 </div>
               </div>
 
+              {/* Search and Filters */}
               <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-md p-6 mb-8">
                 <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
-                  <div className=" bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-lg hover:scale-[1.01] transition-all duration-300 flex-1">
+                  <div className="bg-gradient-to-r from-purple-500 via-pink-500 to-blue-500 rounded-lg hover:scale-[1.01] transition-all duration-300 flex-1">
                     <TextField
                       fullWidth
                       label="Search Activity Name"
@@ -499,7 +267,7 @@ const AdminActivityManage: React.FC = () => {
                       size="medium"
                       className="bg-white dark:bg-slate-700 rounded-lg"
                       value={filters.activity_name}
-                      onChange={handleFilterChange("activity_name")}
+                      onChange={handleInputChange("activity_name")}
                       InputProps={{
                         startAdornment: (
                           <FaSearch className="mr-2 text-gray-400" />
@@ -518,12 +286,7 @@ const AdminActivityManage: React.FC = () => {
                   </Button>
                 </div>
 
-                <Collapse
-                  in={showFilters}
-                  timeout="auto"
-                  unmountOnExit
-                  className="mt-4"
-                >
+                <Collapse in={showFilters} timeout="auto" unmountOnExit className="mt-4">
                   <Grid container spacing={3}>
                     <Grid item xs={12} sm={6} md={4}>
                       <FormControl
@@ -534,8 +297,8 @@ const AdminActivityManage: React.FC = () => {
                       >
                         <InputLabel>Activity Status</InputLabel>
                         <Select
-                          value={filters.status || ""}
-                          onChange={handleFilterChange("status")}
+                          value={filters.status}
+                          onChange={handleSelectChange("status")}
                           label="Activity Status"
                         >
                           <MenuItem value="">
@@ -549,6 +312,7 @@ const AdminActivityManage: React.FC = () => {
                         </Select>
                       </FormControl>
                     </Grid>
+
                     <Grid item xs={12} sm={6} md={4}>
                       <FormControl
                         fullWidth
@@ -558,8 +322,8 @@ const AdminActivityManage: React.FC = () => {
                       >
                         <InputLabel>Activity Category</InputLabel>
                         <Select
-                          value={filters.activity_category || ""}
-                          onChange={handleFilterChange("activity_category")}
+                          value={filters.activity_category}
+                          onChange={handleSelectChange("activity_category")}
                           label="Activity Category"
                         >
                           <MenuItem value="">
@@ -573,183 +337,35 @@ const AdminActivityManage: React.FC = () => {
                         </Select>
                       </FormControl>
                     </Grid>
+
                     {/* Date Range Filters */}
                     <Grid item xs={12} sm={6} md={4}>
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <MuiDateTimePicker
-                          label="Start Date From"
-                          value={filters.startDateFrom}
-                          onChange={(date: Date | null | undefined) => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              startDateFrom: date as Date | null,
-                            }));
-                          }}
-                          renderInput={(params: any) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              size="small"
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </LocalizationProvider>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <MuiDateTimePicker
-                          label="Start Date To"
-                          value={filters.startDateTo}
-                          onChange={(date: Date | null | undefined) => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              startDateTo: date as Date | null,
-                            }));
-                          }}
-                          renderInput={(params: any) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              size="small"
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </LocalizationProvider>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <MuiDateTimePicker
-                          label="End Date From"
-                          value={filters.endDateFrom}
-                          onChange={(date: Date | null | undefined) => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              endDateFrom: date as Date | null,
-                            }));
-                          }}
-                          renderInput={(params: any) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              size="small"
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </LocalizationProvider>
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <MuiDateTimePicker
-                          label="End Date To"
-                          value={filters.endDateTo}
-                          onChange={(date: Date | null | undefined) => {
-                            setFilters((prev) => ({
-                              ...prev,
-                              endDateTo: date as Date | null,
-                            }));
-                          }}
-                          renderInput={(params: any) => (
-                            <TextField
-                              {...params}
-                              fullWidth
-                              size="small"
-                              className="bg-white dark:bg-slate-700 rounded-lg"
-                            />
-                          )}
-                        />
-                      </LocalizationProvider>
-                    </Grid>
-
-                    {/* Capacity Filters */}
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Min Capacity"
-                        type="number"
-                        variant="outlined"
-                        size="small"
-                        value={filters.min_capacity_limit}
-                        onChange={handleFilterChange("min_capacity_limit")}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{ inputProps: { min: 0 } }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Max Capacity"
-                        type="number"
-                        variant="outlined"
-                        size="small"
-                        value={filters.max_capacity_limit}
-                        onChange={handleFilterChange("max_capacity_limit")}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{ inputProps: { min: 0 } }}
-                      />
-                    </Grid>
-
-                    {/* Attendance Score Filters */}
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Min Attendance Score"
-                        type="number"
-                        variant="outlined"
-                        size="small"
-                        value={filters.min_attendance_score_unit}
-                        onChange={handleFilterChange(
-                          "min_attendance_score_unit"
-                        )}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{
-                          inputProps: { min: 0, max: 10, step: 0.1 },
-                        }}
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Max Attendance Score"
-                        type="number"
-                        variant="outlined"
-                        size="small"
-                        value={filters.max_attendance_score_unit}
-                        onChange={handleFilterChange(
-                          "max_attendance_score_unit"
-                        )}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{
-                          inputProps: { min: 0, max: 10, step: 0.1 },
+                      <DateTimePicker
+                        label="Start Date From"
+                        value={filters.startDateFrom}
+                        onChange={handleDateChange("startDateFrom")}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            size: "small",
+                            className: "bg-white dark:bg-slate-700 rounded-lg"
+                          }
                         }}
                       />
                     </Grid>
 
-                    {/* Venue and Fee */}
                     <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Venue"
-                        variant="outlined"
-                        size="small"
-                        value={filters.activity_venue}
-                        onChange={handleFilterChange("activity_venue")}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                      />
-                    </Grid>
-                    <Grid item xs={12} sm={6} md={4}>
-                      <TextField
-                        fullWidth
-                        label="Max Fee"
-                        type="number"
-                        variant="outlined"
-                        size="small"
-                        value={filters.fee}
-                        onChange={handleFilterChange("fee")}
-                        className="bg-white dark:bg-slate-700 rounded-lg"
-                        InputProps={{ inputProps: { min: 0 } }}
+                      <DateTimePicker
+                        label="Start Date To"
+                        value={filters.startDateTo}
+                        onChange={handleDateChange("startDateTo")}
+                        slotProps={{
+                          textField: {
+                            fullWidth: true,
+                            size: "small",
+                            className: "bg-white dark:bg-slate-700 rounded-lg"
+                          }
+                        }}
                       />
                     </Grid>
 
@@ -758,24 +374,7 @@ const AdminActivityManage: React.FC = () => {
                       <Button
                         variant="outlined"
                         color="secondary"
-                        onClick={() => {
-                          setFilters({
-                            activity_name: "",
-                            status: null,
-                            activity_category: null,
-                            startDateFrom: null,
-                            startDateTo: null,
-                            endDateFrom: null,
-                            endDateTo: null,
-                            min_attendance_score_unit: "",
-                            max_attendance_score_unit: "",
-                            min_capacity_limit: "",
-                            max_capacity_limit: "",
-                            activity_venue: "",
-                            fee: "",
-                            registration_deadline: null,
-                          });
-                        }}
+                        onClick={resetFilters}
                         className="mr-2"
                       >
                         Clear All Filters
@@ -785,6 +384,14 @@ const AdminActivityManage: React.FC = () => {
                 </Collapse>
               </div>
 
+              {/* Error Display */}
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                  {error}
+                </div>
+              )}
+
+              {/* Activities Table */}
               <TableContainer
                 component={Paper}
                 className="shadow-lg rounded-2xl overflow-hidden bg-white dark:bg-slate-800"
@@ -792,33 +399,46 @@ const AdminActivityManage: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow className="bg-blue-600">
-                      <TableCell className="text-white font-semibold">
-                        ID
-                      </TableCell>
-                      <TableCell className="text-white font-semibold">
+                      <TableCell 
+                        className="text-white font-semibold cursor-pointer"
+                        onClick={() => handleSortChange("activityName")}
+                      >
                         Name
+                        {sorting.field === "activityName" && (
+                          <span className="ml-1">{sorting.direction === "asc" ? "▲" : "▼"}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-white font-semibold">
-                        Category
-                      </TableCell>
-                      <TableCell className="text-white font-semibold">
-                        Venue
-                      </TableCell>
-                      <TableCell className="text-white font-semibold">
+                      <TableCell className="text-white font-semibold">Category</TableCell>
+                      <TableCell className="text-white font-semibold">Venue</TableCell>
+                      <TableCell 
+                        className="text-white font-semibold cursor-pointer"
+                        onClick={() => handleSortChange("startDate")}
+                      >
                         Start Date
+                        {sorting.field === "startDate" && (
+                          <span className="ml-1">{sorting.direction === "asc" ? "▲" : "▼"}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-white font-semibold">
+                      <TableCell 
+                        className="text-white font-semibold cursor-pointer"
+                        onClick={() => handleSortChange("endDate")}
+                      >
                         End Date
+                        {sorting.field === "endDate" && (
+                          <span className="ml-1">{sorting.direction === "asc" ? "▲" : "▼"}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-white font-semibold">
+                      <TableCell 
+                        className="text-white font-semibold cursor-pointer"
+                        onClick={() => handleSortChange("activityStatus")}
+                      >
                         Status
+                        {sorting.field === "activityStatus" && (
+                          <span className="ml-1">{sorting.direction === "asc" ? "▲" : "▼"}</span>
+                        )}
                       </TableCell>
-                      <TableCell className="text-white font-semibold">
-                        Capacity
-                      </TableCell>
-                      <TableCell className="text-white font-semibold">
-                        Actions
-                      </TableCell>
+                      <TableCell className="text-white font-semibold">Capacity</TableCell>
+                      <TableCell className="text-white font-semibold">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -829,18 +449,12 @@ const AdminActivityManage: React.FC = () => {
                         className="hover:bg-gray-50 cursor-pointer transition-colors"
                       >
                         <TableCell className="text-gray-700">
-                          {activity.id}
-                        </TableCell>
-                        <TableCell className="text-gray-700">
                           {activity.activity_name}
                         </TableCell>
                         <TableCell>
                           <Chip
-                            label={activity.activity_category.replace(
-                              /_/g,
-                              " "
-                            )}
-                            color={getCategoryColor(activity.activity_category)}
+                            label={activity.activity_category.replace(/_/g, " ")}
+                            color={getCategoryColor(activity.activity_category) as any}
                             variant="outlined"
                             className="font-medium"
                           />
@@ -857,13 +471,12 @@ const AdminActivityManage: React.FC = () => {
                         <TableCell>
                           <Chip
                             label={activity.activity_status.replace(/_/g, " ")}
-                            color={getStatusColor(activity.activity_status)}
+                            color={getStatusColor(activity.activity_status) as any}
                             className="font-medium"
                           />
                         </TableCell>
                         <TableCell className="text-gray-700">
-                          {activity.current_participants}/
-                          {activity.capacity_limit}
+                          {activity.current_participants}/{activity.capacity_limit}
                         </TableCell>
                         <TableCell>
                           <IconButton
@@ -882,10 +495,7 @@ const AdminActivityManage: React.FC = () => {
                             color={activity.is_approved ? "error" : "success"}
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleApprovalToggle(
-                                activity.id,
-                                activity.is_approved
-                              );
+                              handleApprovalToggle(activity.id, activity.is_approved);
                             }}
                             className={`mr-2 ${
                               activity.is_approved
@@ -898,11 +508,7 @@ const AdminActivityManage: React.FC = () => {
                                 : "Approve Activity"
                             }
                           >
-                            {activity.is_approved ? (
-                              <DisapproveIcon />
-                            ) : (
-                              <ApproveIcon />
-                            )}
+                            {activity.is_approved ? <DisapproveIcon /> : <ApproveIcon />}
                           </IconButton>
                           <IconButton
                             size="small"
@@ -922,10 +528,11 @@ const AdminActivityManage: React.FC = () => {
                 </Table>
               </TableContainer>
 
+              {/* Pagination */}
               <Box className="mt-6 flex justify-center">
                 <Pagination
-                  count={totalPages}
-                  page={page + 1}
+                  count={pagination.totalPages}
+                  page={pagination.page}
                   onChange={handlePageChange}
                   color="primary"
                   className="bg-white shadow-sm rounded-lg p-2"
@@ -939,16 +546,4 @@ const AdminActivityManage: React.FC = () => {
   );
 };
 
-// Add this CSS animation class to your global styles or tailwind config
-const styles = `
-@keyframes gradient-x {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
-.animate-gradient-x {
-  animation: gradient-x 3s ease infinite;
-}
-`;
-
-export default AdminActivityManage;
+export default AdminActivityManageRefactored; 

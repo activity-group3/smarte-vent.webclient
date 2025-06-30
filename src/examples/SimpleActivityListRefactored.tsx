@@ -123,6 +123,7 @@ const SimpleActivityListRefactored: React.FC = () => {
       <h2 className="text-2xl font-bold mb-6">Activities (Refactored Version)</h2>
       
       {/* Filters */}
+      {/*@ts-ignore*/}
       <Box className="mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
         <TextField
           label="Search Activity Name"

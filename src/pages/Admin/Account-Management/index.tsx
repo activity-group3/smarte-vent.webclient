@@ -1,4 +1,4 @@
-  // @ts-nocheck
+// @ts-nocheck
 import React, { useState, useEffect } from "react";
 import {
   Table,
@@ -42,6 +42,7 @@ import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { FaUserCheck, FaUserShield } from "react-icons/fa";
+import { AccountRole, MajorType, Account, Filters, NewAccount } from "@/types/adminAccountManagement";
 
 // Custom styled components using Material-UI with Tailwind classes
 const StyledTableContainer = styled(TableContainer)(({ theme     }) => ({
@@ -75,27 +76,6 @@ const StyledButton = styled(Button)(({ theme }) => ({
   fontWeight: 600,
 }));
 
-const AccountRole = {
-  ADMIN: "ADMIN",
-  STUDENT: "STUDENT",
-  ORGANIZATION: "ORGANIZATION",
-};
-
-const MajorType = {
-  NONE: "",  // Empty string for None option
-  IT: "IT",
-  EE: "EE",
-  IS: "IS",
-  AE: "AE",
-  AI: "AI",
-};
-
-const SortFields = {
-  ROLE: "role",
-  IS_ACTIVE: "isActive",
-  STUDENT_CODE: "studentCode",
-};
-
 const getRoleColor = (role: string) => {
   switch (role) {
     case "ADMIN":
@@ -107,43 +87,11 @@ const getRoleColor = (role: string) => {
   }
 };
 
-// -------------------------
-// Type definitions
-// -------------------------
-
-// Role and major types can be refined later if needed
-export interface Account {
-  id: number;
-  username: string;
-  name: string;
-  email: string;
-  phone?: string;
-  identify_code?: string;
-  major?: string;
-  role: keyof typeof AccountRole | string;
-  is_active: boolean;
-}
-
-interface Filters {
-  fullName: string;
-  email: string;
-  phone: string;
-  identifyCode: string;
-  role: string;
-  major: string;
-  isActive: string;
-}
-
-interface NewAccount {
-  username: string;
-  password: string;
-  identifyCode: string;
-  fullName: string;
-  email: string;
-  phone: string;
-  major: string;
-  role: string;
-}
+const SortFields = {
+  ROLE: "role",
+  IS_ACTIVE: "isActive",
+  STUDENT_CODE: "studentCode",
+};
 
 const AdminAccountManage: React.FC = () => {
   const navigate = useNavigate();

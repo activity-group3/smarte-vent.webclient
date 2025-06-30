@@ -43,59 +43,15 @@ import { statisticsService } from '../../../services/statisticsService'
 // Import styles
 import './adminDashboard.css'
 
-// Enhanced interface with additional properties based on usage in the component
-interface EnhancedGeneralStatistics {
-  totalActivities: number;
-  totalParticipants: number;
-  totalOrganizations: number;
-  completedActivities: number;
-  pendingActivities: number;
-  activitiesLastWeek?: number;
-  activitiesLastMonth?: number;
-  averageRating?: number;
-  totalReviews?: number;
-  activitiesByCategory?: Record<string, number>;
-  averageRatingsByActivity?: Array<{
-    activityId: string;
-    score: number;
-  }>;
-  topKeywords?: Array<{
-    keyword: string;
-    count: number;
-  }>;
-  [key: string]: any;
-}
-
-interface FilterState {
-  timePeriod: string;
-  activityType: string;
-  status: string;
-  startDate: Date | null;
-  endDate: Date | null;
-}
-
-interface TimePeriod {
-  label: string;
-  value: string;
-}
-
-interface ChartDataItem {
-  name: string;
-  value: number;
-  color: string;
-}
-
-interface RatingDataItem {
-  activityId: string;
-  score: number;
-  fill: string;
-}
-
-interface KeywordDataItem {
-  keyword: string;
-  count: number;
-  fill: string;
-}
+// Types
+import type {
+  EnhancedGeneralStatistics,
+  FilterState,
+  TimePeriod,
+  ChartDataItem,
+  RatingDataItem,
+  KeywordDataItem,
+} from "@/types/adminDashboard";
 
 /**
  * Admin Dashboard Component

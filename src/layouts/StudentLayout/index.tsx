@@ -23,7 +23,6 @@ import {
   FaUserCog,
 } from "react-icons/fa";
 import AccountManagementModal from "../../components/AccountManagementModal";
-import "./dashboardLayout.css";
 import NotificationDropdown from "../../components/NotificationDropdown";
 
 interface User {
@@ -219,9 +218,9 @@ const StudentLayout: React.FC = () => {
                     <NavLink
                       to={item.path}
                       end={item.exact}
-                      className={({ isActive: isNavActive }) =>
-                        `nav-link flex items-center rounded-lg transition-all duration-200 px-4 py-3 ${isNavActive
-                          ? "nav-item-active bg-blue-500 text-white shadow-md"
+                      className={({ isActive }) =>
+                        `flex items-center rounded-lg transition-all duration-200 px-4 py-3 ${isActive
+                          ? "bg-blue-500 text-white shadow-md font-medium transform translate-x-1 hover:bg-blue-600"
                           : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-slate-700"
                         }`
                       }
@@ -232,7 +231,7 @@ const StudentLayout: React.FC = () => {
                       }}
                     >
                       <span className="text-lg">{item.icon}</span>
-                      <span className="nav-text ml-3 font-medium">{item.label}</span>
+                      <span className="ml-3 font-medium">{item.label}</span>
                     </NavLink>
                   </li>
                 );
