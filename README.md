@@ -1,4 +1,5 @@
 # CampusHub
+<a href="https://dbdiagram.io/d/ttcs-678df7306b7fa355c36580a7">Diagram</a>
 
 A comprehensive student activity management platform built with React, TypeScript, and modern web technologies. This application provides role-based interfaces for administrators, organizations, and students to manage, participate in, and analyze educational activities.
 
