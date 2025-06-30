@@ -136,15 +136,7 @@ src/
    # Configure your environment variables
    # Edit .env.local with your API endpoints and keys
    ```
-
-4. **Database Setup**
-   ```bash
-   # Set up Appwrite backend
-   npm run setup:db
-   
-   # Seed initial data (optional)
-   npm run seed:discounts
-   ```
+ 
 
 ### Development
 
