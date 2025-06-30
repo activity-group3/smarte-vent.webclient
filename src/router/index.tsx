@@ -29,10 +29,30 @@ import OrganizationDashboard from "../pages/Organization/Dashboard";
 import OrganizationParticipantManagement from "../pages/Organization/ParticipantManagement";
 import OrganizationActivityDetail from "../pages/Organization/ActivityDetail";
 import StudentAnalysis from "../pages/user/Analysis";
-import { useRoleAuth } from "../hooks/useAuth";
+import { useAuth } from "../hooks/useAuth";
+
+// Protected Route Component
+const ProtectedAdminRoute: React.FC = () => {
+  const { user, isLoggedIn } = useAuth();
+  
+  if (!isLoggedIn || user?.role !== "ADMIN") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <AdminLayout />;
+};
+
+const ProtectedOrganizationRoute: React.FC = () => {
+  const { user, isLoggedIn } = useAuth();
+  
+  if (!isLoggedIn || user?.role !== "ORGANIZATION") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return <OrganizationLayout />;
+};
 
 const Router: React.FC = () => {
-  const { checkAdminRole, checkOrganizationRole } = useRoleAuth();
   
   const routes = useRoutes([
     {
@@ -101,11 +121,7 @@ const Router: React.FC = () => {
       ],
     },
     {
-      element: checkAdminRole() ? (
-        <AdminLayout />
-      ) : (
-        <Navigate to="/dashboard" />
-      ),
+      element: <ProtectedAdminRoute />,
       children: [
         {
           path: "/admin/dashboard",
@@ -145,11 +161,7 @@ const Router: React.FC = () => {
       ],
     },
     {
-      element: checkOrganizationRole() ? (
-        <OrganizationLayout />
-      ) : (
-        <Navigate to="/dashboard" />
-      ),
+      element: <ProtectedOrganizationRoute />,
       children: [
         {
           path: "/organization/dashboard",

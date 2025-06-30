@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 
 interface User {
-  id: string;
+  id: number;
   name: string;
-  email: string;
+  email: string | null;
+  phone: string | null;
+  identify_code: string;
+  major: string;
+  is_active: boolean | null;
   role: "ADMIN" | "ORGANIZATION" | "STUDENT";
   organization_name?: string;
 }

@@ -70,7 +70,7 @@ const ActivityDetail = () => {
   const [participationRole, setParticipationRole] = useState("PARTICIPANT");
   const [openJoinDialog, setOpenJoinDialog] = useState<boolean>(false);
   const [isParticipating, setIsParticipating] = useState<boolean>(false);
-  const [participationId, setParticipationId] = useState<string | null>(user?.id || null);
+  const [participationId, setParticipationId] = useState<number | null>(user?.id || null);
   const [openFeedbackDialog, setOpenFeedbackDialog] = useState<boolean>(false);
   const [participantStatus, setParticipantStatus] = useState<string | null>(null);
   const [feedbackData, setFeedbackData] = useState<FeedbackData>({
