@@ -40,7 +40,7 @@ import {
 import ActivityUpdateForm from "@/components/ActivityUpdateForm";
 import { useApiData, useModal, useTableActions } from "@/hooks";
 import type { Activity, ActivityFilters, SortField } from "@/types/activityManagement";
-import { ActivityStatus, ActivityCategory } from "@/types/activityManagement";
+import { ActivityStatus, ActivityCategory } from "@/types/entities";
 
 const AdminActivityManageRefactored: React.FC = () => {
   const navigate = useNavigate();
@@ -306,7 +306,7 @@ const AdminActivityManageRefactored: React.FC = () => {
                           </MenuItem>
                           {Object.values(ActivityStatus).map((status) => (
                             <MenuItem key={status} value={status}>
-                              {status.replace(/_/g, " ")}
+                              {(status as string).replace(/_/g, " ")}
                             </MenuItem>
                           ))}
                         </Select>
@@ -331,7 +331,7 @@ const AdminActivityManageRefactored: React.FC = () => {
                           </MenuItem>
                           {Object.values(ActivityCategory).map((category) => (
                             <MenuItem key={category} value={category}>
-                              {category.replace(/_/g, " ")}
+                              {(category as string).replace(/_/g, " ")}
                             </MenuItem>
                           ))}
                         </Select>
