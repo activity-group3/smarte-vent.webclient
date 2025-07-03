@@ -21,6 +21,7 @@ interface UsePaginationReturn {
   getApiPage: () => number; // Returns 0-based page for API calls
 }
 
+
 export const usePagination = ({
   initialPage = 1,
   initialPageSize = 10,
